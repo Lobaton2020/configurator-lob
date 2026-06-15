@@ -125,12 +125,31 @@ class RecordService:
             match = True
             for key, search_value in valid_filters.items():
                 record_value = record_data.get(key)
+                search_value_str = str(search_value)
+                
                 if record_value is not None:
                     record_value_str = str(record_value).lower()
-                    search_value_str = str(search_value).lower()
-                    if record_value_str != search_value_str:
-                        match = False
-                        break
+                    search_str_lower = search_value_str.lower()
+                    
+                    if search_str_lower.startswith("*") and search_str_lower.endswith("*"):
+                        pattern = search_str_lower[1:-1]
+                        if pattern not in record_value_str:
+                            match = False
+                            break
+                    elif search_str_lower.startswith("*"):
+                        pattern = search_str_lower[1:]
+                        if not record_value_str.endswith(pattern):
+                            match = False
+                            break
+                    elif search_str_lower.endswith("*"):
+                        pattern = search_str_lower[:-1]
+                        if not record_value_str.startswith(pattern):
+                            match = False
+                            break
+                    else:
+                        if record_value_str != search_str_lower:
+                            match = False
+                            break
                 else:
                     match = False
                     break
