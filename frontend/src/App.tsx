@@ -1,22 +1,112 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Audits } from './pages/Audits';
 import { Schemas } from './pages/Schemas';
 import { SchemaDetail } from './pages/SchemaDetail';
+import { Scoops } from './pages/Scoops';
+import { ScoopNew } from './pages/ScoopNew';
+import { ScoopDetail } from './pages/ScoopDetail';
+import { Cluster } from './pages/Cluster';
+import { Login } from './pages/Login';
+import { AuthProvider } from './auth/AuthContext';
+import { RequireAuth } from './auth/RequireAuth';
+
+const GOOGLE_CLIENT_ID_FALLBACK =
+  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_GOOGLE_CLIENT_ID ?? '';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/audits" element={<Audits />} />
-          <Route path="/schemas" element={<Schemas />} />
-          <Route path="/schema/:id" element={<SchemaDetail />} />
-        </Routes>
-      </Layout>
-    </BrowserRouter>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID_FALLBACK}>
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <Dashboard />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/audits"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <Audits />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/schemas"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <Schemas />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/schema/:id"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <SchemaDetail />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/scoops"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <Scoops />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/scoops/new"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <ScoopNew />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/cluster"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <Cluster />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/scoops/:id"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <ScoopDetail />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </GoogleOAuthProvider>
   );
 }
 

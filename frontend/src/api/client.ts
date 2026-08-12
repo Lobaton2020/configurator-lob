@@ -1,4 +1,13 @@
-const API_BASE = 'http://localhost:5001/api';
+/**
+ * Cliente de schemas/records/audits del Configurator.
+ *
+ * Antes apuntaba a un backend propio (configurator-lob, puerto 5001); tras la
+ * migracion el backend vive en laurel-infra-manager (5002) y exige Bearer JWT.
+ * Por eso todos los metodos pasan por `laurelFetch` (inyecta el token y maneja
+ * el 401 redirigiendo a /login).
+ */
+
+import { laurelFetch } from './laurel';
 
 export interface Schema {
   id: number;
@@ -35,129 +44,130 @@ export interface PaginatedRecords {
   pages: number;
 }
 
-export const api = {
-  // Schemas
-  async getSchemas(): Promise<Schema[]> {
-    const res = await fetch(`${API_BASE}/schemas`);
-    return res.json();
-  },
-
-  async getSchema(id: number): Promise<Schema> {
-    const res = await fetch(`${API_BASE}/schemas/${id}`);
-    return res.json();
-  },
-
-  async createSchema(data: { name: string; description?: string }): Promise<Schema> {
-    const res = await fetch(`${API_BASE}/schemas`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-
-  async updateSchema(id: number, data: { name: string; description?: string }): Promise<Schema> {
-    const res = await fetch(`${API_BASE}/schemas/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-
-  async deleteSchema(id: number): Promise<void> {
-    await fetch(`${API_BASE}/schemas/${id}`, { method: 'DELETE' });
-  },
-
-  // Columns
-  async getColumns(schemaId: number): Promise<Column[]> {
-    const res = await fetch(`${API_BASE}/schemas/${schemaId}/columns`);
-    return res.json();
-  },
-
-  async createColumn(schemaId: number, data: Omit<Column, 'id' | 'schema_id' | 'created_at'>): Promise<Column> {
-    const res = await fetch(`${API_BASE}/schemas/${schemaId}/columns`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-
-  async getColumn(schemaId: number, columnId: number): Promise<Column> {
-    const res = await fetch(`${API_BASE}/schemas/${schemaId}/columns/${columnId}`);
-    return res.json();
-  },
-
-  async deleteColumn(schemaId: number, columnId: number): Promise<void> {
-    await fetch(`${API_BASE}/schemas/${schemaId}/columns/${columnId}`, { method: 'DELETE' });
-  },
-
-  async updateColumn(schemaId: number, columnId: number, data: { name: string; data_type: string; is_filterable: boolean; order: number }): Promise<Column> {
-    const res = await fetch(`${API_BASE}/schemas/${schemaId}/columns/${columnId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-
-  // Records
-  async getRecords(schemaId: number, page = 1, limit = 20): Promise<PaginatedRecords> {
-    const res = await fetch(`${API_BASE}/schemas/${schemaId}/records?page=${page}&limit=${limit}`);
-    return res.json();
-  },
-
-  async createRecord(schemaId: number, data: Record<string, unknown>): Promise<ConfigRecord> {
-    const res = await fetch(`${API_BASE}/schemas/${schemaId}/records`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data }),
-    });
-    return res.json();
-  },
-
-  async getRecord(schemaId: number, recordId: number): Promise<ConfigRecord> {
-    const res = await fetch(`${API_BASE}/schemas/${schemaId}/records/${recordId}`);
-    return res.json();
-  },
-
-  async updateRecord(schemaId: number, recordId: number, data: Record<string, unknown>): Promise<ConfigRecord> {
-    const res = await fetch(`${API_BASE}/schemas/${schemaId}/records/${recordId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data }),
-    });
-    return res.json();
-  },
-
-  async deleteRecord(schemaId: number, recordId: number): Promise<void> {
-    await fetch(`${API_BASE}/schemas/${schemaId}/records/${recordId}`, { method: 'DELETE' });
-  },
-
-  async searchRecords(schemaId: number, filters: Record<string, unknown>, page = 1, limit = 20): Promise<PaginatedRecords> {
-    const res = await fetch(`${API_BASE}/schemas/${schemaId}/records/search`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filters, page, limit }),
-    });
-    return res.json();
-  },
-
-  // Audits
-  async getAudits(page = 1, limit = 50): Promise<{ items: Audit[]; total: number; page: number; pages: number }> {
-    const res = await fetch(`${API_BASE}/audits?page=${page}&limit=${limit}`);
-    return res.json();
-  },
-};
-
 export interface Audit {
   id: number;
-  user_id: number | null;
+  user_id: string | null;
   action: string;
   entity_type: string;
-  entity_id: number;
+  entity_id: string;
   old_data: Record<string, unknown> | null;
   new_data: Record<string, unknown> | null;
   created_at: string;
 }
+
+function withQuery(path: string, query: Record<string, string | number | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== '') params.set(key, String(value));
+  }
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
+export const api = {
+  // Schemas
+  async getSchemas(): Promise<Schema[]> {
+    return laurelFetch<Schema[]>('/schemas');
+  },
+
+  async getSchema(id: number): Promise<Schema> {
+    return laurelFetch<Schema>(`/schemas/${id}`);
+  },
+
+  async createSchema(data: { name: string; description?: string }): Promise<Schema> {
+    return laurelFetch<Schema>('/schemas', {
+      method: 'POST',
+      body: data,
+    });
+  },
+
+  async updateSchema(id: number, data: { name: string; description?: string }): Promise<Schema> {
+    return laurelFetch<Schema>(`/schemas/${id}`, {
+      method: 'PUT',
+      body: data,
+    });
+  },
+
+  async deleteSchema(id: number): Promise<void> {
+    await laurelFetch<void>(`/schemas/${id}`, { method: 'DELETE' });
+  },
+
+  // Columns
+  async getColumns(schemaId: number): Promise<Column[]> {
+    return laurelFetch<Column[]>(`/schemas/${schemaId}/columns`);
+  },
+
+  async createColumn(schemaId: number, data: Omit<Column, 'id' | 'schema_id' | 'created_at'>): Promise<Column> {
+    return laurelFetch<Column>(`/schemas/${schemaId}/columns`, {
+      method: 'POST',
+      body: data,
+    });
+  },
+
+  async getColumn(schemaId: number, columnId: number): Promise<Column> {
+    return laurelFetch<Column>(`/schemas/${schemaId}/columns/${columnId}`);
+  },
+
+  async deleteColumn(schemaId: number, columnId: number): Promise<void> {
+    await laurelFetch<void>(`/schemas/${schemaId}/columns/${columnId}`, { method: 'DELETE' });
+  },
+
+  async updateColumn(
+    schemaId: number,
+    columnId: number,
+    data: { name: string; data_type: string; is_filterable: boolean; order: number },
+  ): Promise<Column> {
+    return laurelFetch<Column>(`/schemas/${schemaId}/columns/${columnId}`, {
+      method: 'PUT',
+      body: data,
+    });
+  },
+
+  // Records
+  async getRecords(schemaId: number, page = 1, limit = 20): Promise<PaginatedRecords> {
+    return laurelFetch<PaginatedRecords>(
+      withQuery(`/schemas/${schemaId}/records`, { page, limit }),
+    );
+  },
+
+  async createRecord(schemaId: number, data: Record<string, unknown>): Promise<ConfigRecord> {
+    return laurelFetch<ConfigRecord>(`/schemas/${schemaId}/records`, {
+      method: 'POST',
+      body: { data },
+    });
+  },
+
+  async getRecord(schemaId: number, recordId: number): Promise<ConfigRecord> {
+    return laurelFetch<ConfigRecord>(`/schemas/${schemaId}/records/${recordId}`);
+  },
+
+  async updateRecord(schemaId: number, recordId: number, data: Record<string, unknown>): Promise<ConfigRecord> {
+    return laurelFetch<ConfigRecord>(`/schemas/${schemaId}/records/${recordId}`, {
+      method: 'PUT',
+      body: { data },
+    });
+  },
+
+  async deleteRecord(schemaId: number, recordId: number): Promise<void> {
+    await laurelFetch<void>(`/schemas/${schemaId}/records/${recordId}`, { method: 'DELETE' });
+  },
+
+  async searchRecords(
+    schemaId: number,
+    filters: Record<string, unknown>,
+    page = 1,
+    limit = 20,
+  ): Promise<PaginatedRecords> {
+    return laurelFetch<PaginatedRecords>(`/schemas/${schemaId}/records/search`, {
+      method: 'POST',
+      body: { filters, page, limit },
+    });
+  },
+
+  // Audits
+  async getAudits(page = 1, limit = 50): Promise<{ items: Audit[]; total: number; page: number; pages: number }> {
+    return laurelFetch<{ items: Audit[]; total: number; page: number; pages: number }>(
+      withQuery('/audits', { page, limit }),
+    );
+  },
+};
