@@ -73,7 +73,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="p-4 border-b border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Leaf className="w-6 h-6 text-slate-300" />
-            <h1 className="text-xl font-bold">Backoffice Laurel</h1>
+            <h1 className="text-xl font-bold">Laurel</h1>
           </div>
           <button
             onClick={() => setMobileOpen(false)}
@@ -200,7 +200,7 @@ export function Layout({ children }: LayoutProps) {
         <main className="flex-1 overflow-auto flex flex-col">
           <div className="flex-1">{children}</div>
           <footer className="p-3 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-            Backoffice Laurel v1.0 · Configurator
+            Laurel v1.0 · Configurator
           </footer>
         </main>
       </div>

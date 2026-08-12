@@ -19,7 +19,7 @@ export function Login() {
         <div className="flex items-center justify-center gap-2 mb-2">
           <Leaf className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
-            Backoffice Laurel
+            Laurel
           </h1>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
