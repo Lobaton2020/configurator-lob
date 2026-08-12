@@ -12,17 +12,21 @@ import {
   Box,
   ExternalLink,
   Pencil,
+  ShieldCheck,
+  ShieldX,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   ApiError,
   scoopsApi,
+  type CertificateReport,
   type ManifestPreview,
   type PodLogEntry,
   type Scoop,
   type ScoopStatusReport,
 } from '../api/scoops';
 
-type ActionKind = 'preview' | 'logs' | 'deployResult' | 'none';
+type ActionKind = 'preview' | 'logs' | 'deployResult' | 'certificate' | 'none';
 
 const statusClass: Record<Scoop['status'], string> = {
   active: 'badge-green',
@@ -57,6 +61,8 @@ export function ScoopDetail() {
   const [manifestPreview, setManifestPreview] = useState<ManifestPreview | null>(null);
   const [deployResult, setDeployResult] = useState<{ kind: string; name: string; action: string }[] | null>(null);
   const [logs, setLogs] = useState<PodLogEntry[] | null>(null);
+  const [certificate, setCertificate] = useState<CertificateReport | null>(null);
+  const [certLogs, setCertLogs] = useState<PodLogEntry[] | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -126,6 +132,18 @@ export function ScoopDetail() {
     const result = await scoopsApi.logs(scoopId, { tailLines: 100 });
     setLogs(result.pods);
     setActionKind('logs');
+  });
+
+  const handleCertificate = () => runAction('certificate', async () => {
+    const report = await scoopsApi.certificate(scoopId, status?.namespace);
+    setCertificate(report);
+    setActionKind('certificate');
+    if (report.certificate?.secret_exists) {
+      const logs = await scoopsApi.certificateLogs(scoopId);
+      setCertLogs(logs.pods);
+    } else {
+      setCertLogs(null);
+    }
   });
 
   if (loading) {
@@ -236,6 +254,16 @@ export function ScoopDetail() {
             <ScrollText className="w-4 h-4" />
             Get logs
           </button>
+          {scoop.host && (
+            <button
+              onClick={handleCertificate}
+              disabled={busy !== null}
+              className="btn-secondary"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              TLS certificate
+            </button>
+          )}
         </div>
       </div>
 
@@ -359,6 +387,151 @@ export function ScoopDetail() {
               </pre>
             </details>
           ))}
+        </div>
+      )}
+
+      {actionKind === 'certificate' && certificate && (
+        <div className="card p-4 mb-6">
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+            TLS certificate
+            {certificate.certificate ? (
+              certificate.certificate.ready ? (
+                <span className="badge badge-green">
+                  <CheckCircle2 className="w-3 h-3" /> Ready
+                </span>
+              ) : (
+                <span className="badge badge-amber">
+                  <ShieldAlert className="w-3 h-3" /> {certificate.certificate.condition.reason ?? 'Pending'}
+                </span>
+              )
+            ) : (
+              <span className="badge badge-red"><ShieldX className="w-3 h-3" /> Not found</span>
+            )}
+          </h2>
+
+          {certificate.host && (
+            <p className="text-xs font-mono text-slate-500 mb-3">
+              {certificate.host}
+              {certificate.certificate && (
+                <span className="ml-3">
+                  secret: {certificate.certificate.secret_name}
+                  {' '}
+                  <span className={certificate.certificate.secret_exists ? 'text-green-600' : 'text-red-600'}>
+                    ({certificate.certificate.secret_exists ? 'existe' : 'no existe'})
+                  </span>
+                </span>
+              )}
+            </p>
+          )}
+
+          {certificate.message && (
+            <p className={`text-sm mb-4 ${certificate.certificate?.ready ? 'text-green-600' : 'text-amber-600'}`}>
+              {certificate.message}
+            </p>
+          )}
+
+          {certificate.certificate && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <Stat label="Estado" value={certificate.certificate.ready ? 'Emitido' : (certificate.certificate.condition.reason ?? 'En proceso')} />
+              <Stat label="Secret TLS" value={certificate.certificate.secret_exists ? 'Creado' : 'Pendiente'} />
+              <Stat label="Issuer" value="letsencrypt-prod" />
+            </div>
+          )}
+
+          {certificate.certificate_request && (
+            <div className="mb-4">
+              <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">
+                CertificateRequest {certificate.certificate_request.name}
+              </h3>
+              {certificate.certificate_request.conditions.map((c, i) => (
+                <p key={i} className="text-sm mb-1">
+                  <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                    {c.type} {c.status}
+                  </span>{' '}
+                  {c.reason && <span className="text-amber-600 text-xs">{c.reason}</span>}
+                  {c.message && <span className="text-slate-500 text-xs block mt-1">{c.message}</span>}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {certificate.challenges.length > 0 && (
+            <div className="mb-4">
+              <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">
+                ACME challenges
+              </h3>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th className="th">Name</th>
+                    <th className="th">DNS</th>
+                    <th className="th">State</th>
+                    <th className="th">Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {certificate.challenges.map((c) => (
+                    <tr key={c.name} className="tr">
+                      <td className="py-2 font-mono">{c.name}</td>
+                      <td className="py-2 font-mono">{c.dns_name}</td>
+                      <td className="py-2">{c.state ?? '-'}</td>
+                      <td className="py-2 text-red-600">{c.reason ?? '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {certificate.events.length > 0 && (
+            <div className="mb-4">
+              <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Events</h3>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th className="th">Type</th>
+                    <th className="th">Reason</th>
+                    <th className="th">Message</th>
+                    <th className="th">Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {certificate.events.map((e, i) => (
+                    <tr key={i} className="tr">
+                      <td className="py-2">
+                        <span className={`badge ${e.type === 'Normal' ? 'badge-green' : 'badge-red'}`}>{e.type}</span>
+                      </td>
+                      <td className="py-2">{e.reason}</td>
+                      <td className="py-2 text-xs">{e.message}</td>
+                      <td className="py-2">{e.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {certLogs && certLogs.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">
+                cert-manager logs (filtrados por {certificate.certificate?.name})
+              </h3>
+              {certLogs.map((entry) => (
+                <details key={entry.pod} className="mb-2 border border-slate-200/80 dark:border-slate-800 rounded-xl">
+                  <summary className="cursor-pointer px-3 py-2 bg-slate-50 dark:bg-slate-800/60 text-sm font-medium font-mono">
+                    {entry.pod}
+                  </summary>
+                  <pre className="p-3 text-xs overflow-x-auto bg-slate-900 text-green-300 rounded-b-xl max-h-96 overflow-y-auto">
+                    {entry.logs || '(sin coincidencias)'}
+                  </pre>
+                </details>
+              ))}
+            </div>
+          )}
+
+          {!certificate.certificate && !certLogs?.length && (
+            <p className="text-sm text-slate-500">Desplega el scoop para generar el certificado TLS.</p>
+          )}
         </div>
       )}
 

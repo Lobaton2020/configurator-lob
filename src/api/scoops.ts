@@ -62,6 +62,7 @@ export interface Scoop {
   status_label: string;
   port: number | null;
   namespace: string;
+  host?: string | null;
   url?: string | null;
 }
 
@@ -182,6 +183,7 @@ function toScoop(dto: ComponentDto): Scoop {
     status_label: dto.status_label,
     port: dto.port,
     namespace: dto.namespace,
+    host: dto.host ?? null,
     url: dto.url ?? dto.host ?? null,
   };
 }
@@ -278,10 +280,56 @@ export const scoopsApi = {
     return laurelFetch<{ namespace: string; pods: PodLogEntry[] }>(`/scoops/${id}/logs${qs}`);
   },
 
+  async certificate(id: number, namespace?: string): Promise<CertificateReport> {
+    const qs = namespace ? `?namespace=${encodeURIComponent(namespace)}` : '';
+    return laurelFetch<CertificateReport>(`/scoops/${id}/certificate${qs}`);
+  },
+
+  async certificateLogs(id: number, tailLines = 100): Promise<{ namespace: string; certificate: string; pods: PodLogEntry[] }> {
+    return laurelFetch(`/scoops/${id}/certificate/logs?tail_lines=${tailLines}`);
+  },
+
   async health(): Promise<{ status: string }> {
     return laurelFetch<{ status: string }>('/health');
   },
 };
+
+export interface CertificateCondition {
+  type?: string;
+  status?: string;
+  reason?: string;
+  message?: string;
+}
+
+export interface CertificateReport {
+  host: string | null;
+  message: string;
+  certificate: {
+    name: string;
+    secret_name: string;
+    secret_exists: boolean;
+    ready: boolean;
+    condition: CertificateCondition;
+  } | null;
+  certificate_request: {
+    name: string;
+    conditions: CertificateCondition[];
+  } | null;
+  challenges: Array<{
+    name: string;
+    dns_name?: string;
+    state?: string;
+    reason?: string;
+    message?: string;
+  }>;
+  events: Array<{
+    type: string;
+    reason: string;
+    message: string;
+    count: number;
+    last: string | null;
+  }>;
+}
 
 export interface PodLogEntry {
   pod: string;
