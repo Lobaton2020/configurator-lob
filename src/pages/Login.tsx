@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
+import { Leaf } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
 export function Login() {
@@ -15,9 +16,12 @@ export function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
       <div className="max-w-sm w-full bg-white dark:bg-slate-800 rounded-2xl shadow border border-slate-200 dark:border-slate-700 p-8 text-center">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
-          Backoffice Lob
-        </h1>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <Leaf className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
+            Backoffice Laurel
+          </h1>
+        </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
           Inicia sesion para continuar
         </p>
