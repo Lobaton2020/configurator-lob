@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configurator-lob
+  namespace: prod
+  labels:
+    app: configurator-lob
+    component: backoffice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: configurator-lob
+  template:
+    metadata:
+      labels:
+        app: configurator-lob
+    spec:
+      containers:
+        - name: web
+          image: aflobaton/configurator-lob:latest
+          # Always: el CI repinta el tag latest, asi el pod baja siempre la
+          # version mas reciente.
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"

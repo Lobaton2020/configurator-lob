@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.env
+.env.local
+test-results
+coverage
+playwright-report
+.vscode
+.github
+deploy
