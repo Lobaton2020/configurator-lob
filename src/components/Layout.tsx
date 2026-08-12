@@ -162,7 +162,7 @@ export function Layout({ children }: LayoutProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="relative" ref={userMenuRef}>
+          <div className="relative ml-auto" ref={userMenuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white px-2 py-1"
