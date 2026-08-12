@@ -5,6 +5,8 @@ namespace: prod
 
 resources:
   - ../../base
+  - certificate.yml
+  - ingress.yml
 
 images:
   - name: aflobaton/configurator-lob
