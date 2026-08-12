@@ -11,12 +11,10 @@ import {
   type ServiceRow,
 } from '../api/cluster';
 
-const cardClass =
-  'bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700';
-const thClass =
-  'px-3 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide';
-const tdClass = 'px-3 py-2 text-sm text-slate-600 dark:text-slate-400';
-const tdStrong = 'px-3 py-2 text-sm font-medium text-slate-800 dark:text-white';
+const cardClass = 'card';
+const thClass = 'th';
+const tdClass = 'td text-slate-500';
+const tdStrong = 'td font-medium text-slate-800 dark:text-white';
 
 function SectionTitle({ icon: Icon, children }: { icon?: typeof Box; children: React.ReactNode }) {
   return (
@@ -39,13 +37,9 @@ function EmptyHint({ children }: { children: React.ReactNode }) {
 
 function Badge({ ok }: { ok: boolean }) {
   return ok ? (
-    <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-      OK
-    </span>
+    <span className="badge badge-green">OK</span>
   ) : (
-    <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
-      DOWN
-    </span>
+    <span className="badge badge-red">DOWN</span>
   );
 }
 
@@ -53,14 +47,14 @@ function PhaseBadge({ phase }: { phase?: string }) {
   if (!phase) return null;
   const palette =
     phase === 'Running'
-      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+      ? 'badge-green'
       : phase === 'Succeeded'
-        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+        ? 'badge-blue'
         : phase === 'Failed'
-          ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+          ? 'badge-red'
+          : 'badge-amber';
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${palette}`}>{phase}</span>
+    <span className={`badge ${palette}`}>{phase}</span>
   );
 }
 
@@ -112,15 +106,15 @@ export function Cluster() {
   return (
     <div className="p-4 lg:p-6 text-slate-800 dark:text-white">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <Server className="w-7 h-7" />
+        <h1 className="page-title">
+          <Server />
           Cluster
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
           <select
             value={namespace}
             onChange={(e) => setNamespace(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="input w-auto"
             title="Namespace del cluster a inspeccionar"
           >
             {namespaces.length === 0 ? (
@@ -136,7 +130,7 @@ export function Cluster() {
           <button
             onClick={() => void load()}
             disabled={loading}
-            className="px-3 py-1.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-50"
+            className="btn-secondary"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -145,7 +139,7 @@ export function Cluster() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-start gap-2">
+        <div className="mb-4 alert alert-red">
           <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
           <span className="text-sm">{error}</span>
         </div>
@@ -250,7 +244,7 @@ export function Cluster() {
                 {nodes.map((n) => (
                   <div
                     key={n.name}
-                    className="border border-slate-200 dark:border-slate-700 rounded-lg p-4"
+                    className="border border-slate-200/80 dark:border-slate-800 rounded-xl p-4"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="font-medium text-sm break-all">{n.name}</div>
@@ -261,7 +255,7 @@ export function Cluster() {
                         {n.roles.map((r) => (
                           <span
                             key={r}
-                            className="px-1.5 py-0.5 rounded text-[11px] font-mono bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                            className="chip"
                           >
                             {r}
                           </span>
@@ -300,7 +294,7 @@ export function Cluster() {
                 {namespaces.map((ns) => (
                   <span
                     key={ns.name}
-                    className="px-2 py-1 rounded text-xs font-mono bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                    className="chip font-mono"
                   >
                     {ns.name}
                     {ns.phase === 'Terminating' && (
@@ -322,7 +316,7 @@ export function Cluster() {
             ) : (
               <div className="overflow-x-auto p-5 pt-0">
                 <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-700">
+                  <thead>
                     <tr>
                       {['Nombre', 'Namespace', 'Replicas', 'Disponibles', 'Imagen'].map((h) => (
                         <th key={h} className={thClass}>{h}</th>
@@ -331,7 +325,7 @@ export function Cluster() {
                   </thead>
                   <tbody>
                     {deployments.map((d) => (
-                      <tr key={`${d.namespace}/${d.name}`} className="border-t border-slate-100 dark:border-slate-700">
+                      <tr key={`${d.namespace}/${d.name}`} className="tr">
                         <td className={tdStrong}>{String(d.name)}</td>
                         <td className={tdClass}>{String(d.namespace)}</td>
                         <td className={tdClass}>
@@ -359,7 +353,7 @@ export function Cluster() {
             ) : (
               <div className="overflow-x-auto p-5 pt-0">
                 <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-700">
+                  <thead>
                     <tr>
                       {['Nombre', 'Namespace', 'Tipo', 'Cluster IP', 'Puertos'].map((h) => (
                         <th key={h} className={thClass}>{h}</th>
@@ -368,7 +362,7 @@ export function Cluster() {
                   </thead>
                   <tbody>
                     {services.map((s) => (
-                      <tr key={`${s.namespace}/${s.name}`} className="border-t border-slate-100 dark:border-slate-700">
+                      <tr key={`${s.namespace}/${s.name}`} className="tr">
                         <td className={tdStrong}>{String(s.name)}</td>
                         <td className={tdClass}>{String(s.namespace)}</td>
                         <td className={tdClass}>{String(s.type ?? '—')}</td>
@@ -378,7 +372,7 @@ export function Cluster() {
                             {(s.ports ?? []).map((p, i) => (
                               <span
                                 key={i}
-                                className="px-1.5 py-0.5 rounded text-[11px] font-mono bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                className="chip"
                               >
                                 {p.port}
                                 {p.node_port ? `:${p.node_port}` : ''}/{p.protocol ?? ''}
@@ -404,7 +398,7 @@ export function Cluster() {
             ) : (
               <div className="overflow-x-auto p-5 pt-0">
                 <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-700">
+                  <thead>
                     <tr>
                       {['Nombre', 'Hosts', 'Clase', 'Reglas'].map((h) => (
                         <th key={h} className={thClass}>{h}</th>
@@ -413,7 +407,7 @@ export function Cluster() {
                   </thead>
                   <tbody>
                     {ingresses.map((ing) => (
-                      <tr key={`${ing.namespace}/${ing.name}`} className="border-t border-slate-100 dark:border-slate-700">
+                      <tr key={`${ing.namespace}/${ing.name}`} className="tr">
                         <td className={tdStrong}>{String(ing.name)}</td>
                         <td className={`${tdClass} font-mono`}>
                           {(ing.hosts ?? []).join(', ') || '—'}
@@ -438,7 +432,7 @@ export function Cluster() {
             ) : (
               <div className="overflow-x-auto p-5 pt-0">
                 <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-700">
+                  <thead>
                     <tr>
                       {['Nombre', 'Namespace', 'Estado', 'Ready', 'Restarts', 'Nodo'].map((h) => (
                         <th key={h} className={thClass}>{h}</th>
@@ -447,7 +441,7 @@ export function Cluster() {
                   </thead>
                   <tbody>
                     {pods.map((p) => (
-                      <tr key={`${p.namespace}/${p.name}`} className="border-t border-slate-100 dark:border-slate-700">
+                      <tr key={`${p.namespace}/${p.name}`} className="tr">
                         <td className={tdStrong}>
                           {String(p.name)}
                           {p.reason && (

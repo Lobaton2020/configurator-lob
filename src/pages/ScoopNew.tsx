@@ -8,6 +8,8 @@ import {
   type ScoopUiType,
 } from '../api/scoops';
 
+import { RegistryInput } from '../components/RegistryInput';
+
 const emptyForm: ScoopForm = {
   application: '',
   type: 'Web',
@@ -22,9 +24,9 @@ const emptyForm: ScoopForm = {
 };
 
 const inputClass =
-  'w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+  'input';
 
-const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1';
+const labelClass = 'label';
 
 function NumberInput({
   label,
@@ -101,16 +103,16 @@ export function ScoopNew() {
   return (
     <div className="p-4 lg:p-6 text-slate-800 dark:text-white">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
-          <Box className="w-7 h-7" />
+        <h1 className="page-title mb-1">
+          <Box />
           New Scoop
         </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
           Define la infra de una aplicacion para desplegarla en el cluster.
         </p>
 
         {formError && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-start gap-2">
+          <div className="mb-4 alert alert-red">
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
             <span className="text-sm">{formError}</span>
           </div>
@@ -118,7 +120,7 @@ export function ScoopNew() {
 
         <form
           onSubmit={onSubmit}
-          className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-6"
+          className="card p-6"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -147,11 +149,9 @@ export function ScoopNew() {
 
             <div className="md:col-span-2">
               <label className={labelClass}>URL Registry *</label>
-              <input
-                type="text"
+              <RegistryInput
                 value={form.url_registry}
-                onChange={(e) => set('url_registry', e.target.value)}
-                placeholder="aflobaton/mi-app:latest"
+                onChange={(v) => set('url_registry', v)}
                 className={inputClass}
               />
               {errors.url_registry && <p className="text-xs text-red-600 mt-1">{errors.url_registry}</p>}
@@ -171,8 +171,8 @@ export function ScoopNew() {
               </label>
             </div>
 
-            <div className="md:col-span-2 border-t border-slate-200 dark:border-slate-700 pt-4">
-              <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
+            <div className="md:col-span-2 border-t border-slate-100 dark:border-slate-800 pt-4">
+              <h2 className="text-sm font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wide mb-3">
                 Recursos
               </h2>
             </div>
@@ -223,19 +223,19 @@ export function ScoopNew() {
             />
           </div>
 
-          <div className="flex justify-end gap-2 mt-6 border-t border-slate-200 dark:border-slate-700 pt-4">
+          <div className="flex justify-end gap-2 mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
             <button
               type="button"
               onClick={() => navigate('/scoops')}
               disabled={saving}
-              className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg border border-slate-300 dark:border-slate-600 disabled:opacity-50"
+              className="btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="btn-primary"
             >
               {saving ? 'Creating...' : 'Create Scoop'}
             </button>

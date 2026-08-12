@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Plus, Pencil, Trash2, RefreshCw, AlertCircle, Eye, ExternalLink } from 'lucide-react';
 import { ApiError, scoopsApi, type Scoop, type ScoopForm, type ScoopUiType } from '../api/scoops';
+import { RegistryInput } from '../components/RegistryInput';
 
 const emptyForm: ScoopForm = {
   application: '',
@@ -17,14 +18,14 @@ const emptyForm: ScoopForm = {
 };
 
 const inputClass =
-  'w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+  'input';
 
-const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1';
+const labelClass = 'label';
 
 const statusClass: Record<Scoop['status'], string> = {
-  active: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-  error: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  active: 'badge-green',
+  pending: 'badge-amber',
+  error: 'badge-red',
 };
 
 export function Scoops() {
@@ -138,22 +139,22 @@ export function Scoops() {
   return (
     <div className="p-4 lg:p-6 text-slate-800 dark:text-white">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <Box className="w-7 h-7" />
+        <h1 className="page-title">
+          <Box />
           Scoops
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => void load()}
             disabled={loading}
-            className="px-3 py-1.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-50"
+            className="btn-secondary"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
           <Link
             to="/scoops/new"
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             New Scoop
@@ -162,46 +163,44 @@ export function Scoops() {
       </div>
 
       {loadError && (
-        <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-start gap-2">
+        <div className="mb-4 alert alert-red">
           <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
           <span className="text-sm">{loadError}</span>
         </div>
       )}
 
       {loading ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-8 text-center text-slate-600 dark:text-slate-400">
+        <div className="card p-8 text-center text-slate-600 dark:text-slate-400">
           Loading scoops...
         </div>
       ) : scoops.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-8 text-center text-slate-600 dark:text-slate-400">
+        <div className="card p-8 text-center text-slate-600 dark:text-slate-400">
           No scoops yet. Click <span className="font-medium">New Scoop</span> to create one.
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 dark:bg-slate-700">
+            <table className="table">
+              <thead>
                 <tr>
                   {['Application', 'Access', 'Type', 'Status', 'URL Registry', 'Productive',
                     'Req vCPU', 'Req Memory', 'Lim vCPU', 'Lim Memory', 'Min Rep', 'Max Rep'].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
-                      {h}
-                    </th>
+                    <th key={h} className="th">{h}</th>
                   ))}
-                  <th className="px-3 py-2 text-right text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Actions</th>
+                  <th className="th text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {scoops.map((s) => (
-                  <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700">
-                    <td className="px-3 py-2 text-sm text-slate-800 dark:text-white font-medium">
+                  <tr key={s.id} className="tr">
+                    <td className="td font-medium">
                       <div className="flex flex-col">
                         {s.url ? (
                           <a
                             href={s.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline truncate inline-flex items-center gap-1"
+                            className="link hover:underline truncate inline-flex items-center gap-1"
                             title={`Abrir ${s.url}`}
                           >
                             {s.application}
@@ -226,29 +225,29 @@ export function Scoops() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-sm">
+                    <td className="td">
                       <span
-                        className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        className={`badge ${
                           s.type === 'Web'
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                            ? 'badge-blue'
+                            : 'badge-amber'
                         }`}
                       >
                         {s.type}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-sm">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusClass[s.status]}`}>
+                    <td className="td">
+                      <span className={`badge ${statusClass[s.status]}`}>
                         {s.status_label}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-sm">
+                    <td className="td">
                       {s.port ? (
                         <a
                           href={`http://192.168.20.240:${s.port}/`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono badge-blue hover:bg-blue-200 dark:hover:bg-blue-900/60"
                           title="Open in LAN"
                         >
                           :{s.port}
@@ -258,33 +257,29 @@ export function Scoops() {
                         <span className="text-slate-400 text-xs">interno</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400">
+                    <td className="td text-slate-500">
                       <span className="truncate inline-block max-w-xs align-bottom" title={s.url_registry}>
                         {s.url_registry || '-'}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400">
+                    <td className="td text-slate-500">
                       {s.is_productive ? (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                          Yes
-                        </span>
+                        <span className="badge badge-green">Yes</span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-                          No
-                        </span>
+                        <span className="badge badge-gray">No</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400">{s.requested_vcpu}</td>
-                    <td className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400">{s.requested_memory}Mi</td>
-                    <td className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400">{s.limit_vcpu}</td>
-                    <td className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400">{s.limit_memory}Mi</td>
-                    <td className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400">{s.min_replicas}</td>
-                    <td className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400">{s.max_replicas}</td>
-                    <td className="px-3 py-2 text-sm text-right">
+                    <td className="td text-slate-500">{s.requested_vcpu}</td>
+                    <td className="td text-slate-500">{s.requested_memory}Mi</td>
+                    <td className="td text-slate-500">{s.limit_vcpu}</td>
+                    <td className="td text-slate-500">{s.limit_memory}Mi</td>
+                    <td className="td text-slate-500">{s.min_replicas}</td>
+                    <td className="td text-slate-500">{s.max_replicas}</td>
+                    <td className="td text-right">
                       <div className="flex justify-end gap-3">
                         <Link
                           to={`/scoops/${s.id}`}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 inline-flex items-center gap-1"
+                          className="link inline-flex items-center gap-1"
                           title="View"
                         >
                           <Eye className="w-3 h-3" />
@@ -293,7 +288,7 @@ export function Scoops() {
                         <button
                           type="button"
                           onClick={() => openEdit(s)}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 inline-flex items-center gap-1"
+                          className="link inline-flex items-center gap-1"
                           title="Edit"
                         >
                           <Pencil className="w-3 h-3" />
@@ -320,14 +315,14 @@ export function Scoops() {
 
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="scoop-modal-title"
         >
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center gap-2 p-5 border-b border-slate-200 dark:border-slate-700">
-              <Box className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center gap-2 p-5 border-b border-slate-100 dark:border-slate-800">
+              <Box className="w-5 h-5 text-teal-600" />
               <h2 id="scoop-modal-title" className="text-xl font-semibold text-slate-800 dark:text-white">
                 {editingId !== null ? 'Edit Scoop' : 'New Scoop'}
               </h2>
@@ -335,7 +330,7 @@ export function Scoops() {
 
             <div className="p-5 overflow-y-auto flex-1">
               {formError && (
-                <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-start gap-2">
+                <div className="mb-4 alert alert-red">
                   <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                   <span className="text-sm">{formError}</span>
                 </div>
@@ -372,11 +367,9 @@ export function Scoops() {
 
                 <div>
                   <label className={labelClass}>URL Registry</label>
-                  <input
-                    type="text"
+                  <RegistryInput
                     value={form.url_registry}
-                    onChange={(e) => setForm({ ...form, url_registry: e.target.value })}
-                    placeholder="aflobaton/mi-app:latest"
+                    onChange={(v) => setForm({ ...form, url_registry: v })}
                     className={inputClass}
                   />
                   {errors.url_registry && <p className="text-xs text-red-600 mt-1">{errors.url_registry}</p>}
@@ -477,12 +470,12 @@ export function Scoops() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 p-5 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex justify-end gap-2 p-5 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={cancel}
                 disabled={saving}
-                className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg border border-slate-300 dark:border-slate-600 disabled:opacity-50"
+                className="btn-secondary"
               >
                 Cancel
               </button>
@@ -490,7 +483,7 @@ export function Scoops() {
                 type="button"
                 onClick={() => void confirm()}
                 disabled={saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="btn-primary"
               >
                 {saving ? 'Saving...' : editingId !== null ? 'Update' : 'Confirm'}
               </button>

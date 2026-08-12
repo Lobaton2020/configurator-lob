@@ -137,21 +137,21 @@ export function SchemaDetail() {
       <div className="flex gap-4 mb-6 border-b border-slate-200 dark:border-slate-700">
         <button
           onClick={() => { setTab('data'); setSearchParams({ ...Object.fromEntries(searchParams), tab: 'data' }); }}
-          className={`flex items-center gap-2 pb-2 px-1 ${tab === 'data' ? 'border-b-2 border-slate-600 text-slate-800 dark:text-white' : 'text-slate-500'}`}
+          className={`flex items-center gap-2 pb-2 px-1 ${tab === 'data' ? 'border-b-2 border-[#1a73e8] text-[#1a73e8] dark:text-blue-400' : 'border-b-2 border-transparent text-slate-500 hover:text-slate-700'}`}
         >
           <Table className="w-4 h-4" />
           Data
         </button>
         <button
           onClick={() => { setTab('metadata'); setSearchParams({ ...Object.fromEntries(searchParams), tab: 'metadata' }); }}
-          className={`flex items-center gap-2 pb-2 px-1 ${tab === 'metadata' ? 'border-b-2 border-slate-600 text-slate-800 dark:text-white' : 'text-slate-500'}`}
+          className={`flex items-center gap-2 pb-2 px-1 ${tab === 'metadata' ? 'border-b-2 border-[#1a73e8] text-[#1a73e8] dark:text-blue-400' : 'border-b-2 border-transparent text-slate-500 hover:text-slate-700'}`}
         >
           <Database className="w-4 h-4" />
           Metadata
         </button>
         <button
           onClick={() => { setTab('search'); setSearchParams({ ...Object.fromEntries(searchParams), tab: 'search' }); }}
-          className={`flex items-center gap-2 pb-2 px-1 ${tab === 'search' ? 'border-b-2 border-slate-600 text-slate-800 dark:text-white' : 'text-slate-500'}`}
+          className={`flex items-center gap-2 pb-2 px-1 ${tab === 'search' ? 'border-b-2 border-[#1a73e8] text-[#1a73e8] dark:text-blue-400' : 'border-b-2 border-transparent text-slate-500 hover:text-slate-700'}`}
         >
           <Search className="w-4 h-4" />
           Search
@@ -162,7 +162,7 @@ export function SchemaDetail() {
       {tab === 'data' && (
         <>
           {showAddForm && (
-            <div className="mb-4 p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700">
+            <div className="mb-4 p-4 card">
               <h3 className="font-medium text-slate-800 dark:text-white mb-3">Add New Record</h3>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 {columns.map((col) => (
@@ -185,7 +185,7 @@ export function SchemaDetail() {
                             setNewRecordData({ ...newRecordData, [col.name]: JSON.parse(e.target.value) });
                           } catch {}
                         }}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded-lg font-mono text-sm"
+                        className="w-full px-2 py-1.5 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-sm bg-white dark:bg-slate-900"
                         rows={3}
                       />
                     ) : (
@@ -193,50 +193,46 @@ export function SchemaDetail() {
                         type={col.data_type === 'number' ? 'number' : 'text'}
                         value={String(newRecordData[col.name] || '')}
                         onChange={(e) => setNewRecordData({ ...newRecordData, [col.name]: e.target.value })}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded-lg"
+                        className="w-full px-2 py-1.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900"
                       />
                     )}
                   </div>
                 ))}
               </div>
               <div className="flex gap-2">
-                <button onClick={handleAddRecord} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  Save
-                </button>
-                <button onClick={() => { setShowAddForm(false); setNewRecordData({}); }} className="px-3 py-1.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-lg">
-                  Cancel
-                </button>
+                <button onClick={handleAddRecord} className="btn-primary btn-sm">Save</button>
+                <button onClick={() => { setShowAddForm(false); setNewRecordData({}); }} className="btn-secondary btn-sm">Cancel</button>
               </div>
             </div>
           )}
 
           <div className="flex justify-between items-center mb-4">
-<button onClick={() => setShowAddForm(!showAddForm)} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+<button onClick={() => setShowAddForm(!showAddForm)} className={showAddForm ? 'btn-secondary' : 'btn-primary'}>
           <Plus className="w-4 h-4" />
           {showAddForm ? 'Cancel' : 'Add Record'}
         </button>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-slate-50">
+          <div className="card overflow-hidden">
+            <table className="table">
+              <thead>
                 <tr>
                   {columns.map((col) => (
-                    <th key={col.id} className="px-3 py-2 text-left text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {col.name} <span className="text-xs text-slate-400">({col.data_type})</span>
+                    <th key={col.id} className="th">
+                      {col.name} <span className="text-slate-400">({col.data_type})</span>
                     </th>
                   ))}
-                  <th className="px-3 py-2 text-right text-sm font-medium text-slate-700 dark:text-slate-300">Actions</th>
+                  <th className="th text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {records.length === 0 ? (
-                  <tr><td colSpan={columns.length + 1} className="px-3 py-8 text-center text-slate-500">No records</td></tr>
+                  <tr><td colSpan={columns.length + 1} className="td text-center text-slate-500 py-8">No records</td></tr>
                 ) : (
                   records.map((record) => (
-                    <tr key={record.id} className="border-t border-slate-100">
+                    <tr key={record.id} className="tr">
                       {columns.map((col) => (
-                        <td key={col.id} className="px-3 py-2">
+                        <td key={col.id} className="td">
                           {editingRecord === record.id ? (
                             col.data_type === 'boolean' ? (
                               <input type="checkbox" checked={!!editData[col.name]} onChange={(e) => setEditData({ ...editData, [col.name]: e.target.checked })} className="w-4 h-4" />
@@ -252,7 +248,7 @@ export function SchemaDetail() {
                           )}
                         </td>
                       ))}
-                      <td className="px-3 py-2 text-right">
+                      <td className="td text-right">
                         {editingRecord === record.id ? (
                           <div className="flex gap-2 justify-end">
                             <button onClick={() => handleEditSave(record.id)} className="text-green-600 hover:text-green-800 text-sm">Save</button>
@@ -270,7 +266,7 @@ export function SchemaDetail() {
                 )}
               </tbody>
             </table>
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-slate-600 dark:text-slate-400">Show</span>
                 <select
@@ -280,7 +276,7 @@ export function SchemaDetail() {
                     setPage(1);
                     loadData();
                   }}
-                  className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                  className="input w-auto"
                 >
                   <option value={10}>10</option>
                   <option value={20}>20</option>
@@ -293,7 +289,7 @@ export function SchemaDetail() {
                 <button
                   onClick={() => { setPage(page - 1); loadData(); }}
                   disabled={page === 1}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300"
+                  className="btn-secondary"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   Prev
@@ -304,7 +300,7 @@ export function SchemaDetail() {
                 <button
                   onClick={() => { setPage(page + 1); loadData(); }}
                   disabled={page === totalPages || totalPages === 0}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300"
+                  className="btn-secondary"
                 >
                   Next
                   <ChevronRight className="w-4 h-4" />
@@ -317,28 +313,28 @@ export function SchemaDetail() {
 
       {/* Metadata Tab */}
       {tab === 'metadata' && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-6">
+        <div className="card p-6">
           <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-4">{schema.name}</h2>
-          <p className="text-slate-600 dark:text-slate-400 mb-6">{schema.description}</p>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">{schema.description}</p>
           
           <h3 className="font-medium text-slate-800 dark:text-white mb-3">Columns</h3>
-          <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-            <table className="w-full">
-              <thead className="bg-slate-50 dark:bg-slate-700">
+          <div className="overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800">
+            <table className="table">
+              <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-slate-700 dark:text-slate-300">Name</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-slate-700 dark:text-slate-300">Type</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-slate-700 dark:text-slate-300">Filterable</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-slate-700 dark:text-slate-300">Order</th>
+                  <th className="th">Name</th>
+                  <th className="th">Type</th>
+                  <th className="th">Filterable</th>
+                  <th className="th">Order</th>
                 </tr>
               </thead>
               <tbody>
                 {columns.map((col) => (
-                  <tr key={col.id} className="border-t border-slate-100 dark:border-slate-700">
-                    <td className="px-4 py-2 text-slate-800 dark:text-white">{col.name}</td>
-                    <td className="px-4 py-2 text-slate-600 dark:text-slate-400">{col.data_type}</td>
-                    <td className="px-4 py-2 text-slate-600 dark:text-slate-400">{col.is_filterable ? 'Yes' : 'No'}</td>
-                    <td className="px-4 py-2 text-slate-600 dark:text-slate-400">{col.order}</td>
+                  <tr key={col.id} className="tr">
+                    <td className="td font-medium">{col.name}</td>
+                    <td className="td text-slate-500">{col.data_type}</td>
+                    <td className="td text-slate-500">{col.is_filterable ? 'Yes' : 'No'}</td>
+                    <td className="td text-slate-500">{col.order}</td>
                   </tr>
                 ))}
               </tbody>
@@ -359,45 +355,45 @@ export function SchemaDetail() {
           {filterableCols.length === 0 ? (
             <div className="text-slate-500">No filterable columns in this schema</div>
           ) : (
-            <form onSubmit={handleSearch} className="mb-6 p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700">
+            <form onSubmit={handleSearch} className="mb-6 card p-6">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                 {filterableCols.map((col) => (
                   <div key={col.id}>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{col.name}</label>
+                    <label className="label">{col.name}</label>
                     <input
                       type={col.data_type === 'number' ? 'number' : 'text'}
                       value={filters[col.name] || ''}
                       onChange={(e) => setFilters({ ...filters, [col.name]: e.target.value })}
                       placeholder={`Filter by ${col.name}`}
-                      className="w-full px-2 py-1.5 border border-slate-300 rounded-lg"
+                      className="input"
                     />
                   </div>
                 ))}
               </div>
-              <button type="submit" disabled={searching} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              <button type="submit" disabled={searching} className="btn-primary">
                 {searching ? 'Searching...' : 'Search'}
               </button>
             </form>
           )}
 
           {searchResults && (
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
-              <div className="p-4 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
+            <div className="card overflow-hidden">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
                 Found {searchResults.total} record{searchResults.total !== 1 ? 's' : ''}
               </div>
-              <table className="w-full">
-                <thead className="bg-slate-50">
+              <table className="table">
+                <thead>
                   <tr>
                     {columns.map((col) => (
-                      <th key={col.id} className="px-3 py-2 text-left text-sm font-medium text-slate-700 dark:text-slate-300">{col.name}</th>
+                      <th key={col.id} className="th">{col.name}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {searchResults.items.map((record) => (
-                    <tr key={record.id} className="border-t border-slate-100">
+                    <tr key={record.id} className="tr">
                       {columns.map((col) => (
-                        <td key={col.id} className="px-3 py-2 text-sm">
+                        <td key={col.id} className="td">
                           {col.data_type === 'json' ? JSON.stringify(record.data[col.name] || {}) : String(record.data[col.name] ?? '')}
                         </td>
                       ))}

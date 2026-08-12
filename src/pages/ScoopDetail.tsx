@@ -25,16 +25,16 @@ import {
 type ActionKind = 'preview' | 'logs' | 'deployResult' | 'none';
 
 const statusClass: Record<Scoop['status'], string> = {
-  active: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-  error: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  active: 'badge-green',
+  pending: 'badge-amber',
+  error: 'badge-red',
 };
 
 const labelClass = 'block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase mb-1';
 
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="bg-slate-50 dark:bg-slate-900/40 rounded-lg p-3">
+    <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-100 dark:border-slate-800">
       <div className={labelClass}>{label}</div>
       <div className="text-sm text-slate-800 dark:text-white font-medium">{value}</div>
     </div>
@@ -143,7 +143,7 @@ export function ScoopDetail() {
           <ArrowLeft className="w-4 h-4" />
           Back to Scoops
         </Link>
-        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-start gap-2">
+        <div className="alert alert-red">
           <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
           <span className="text-sm">{error}</span>
         </div>
@@ -164,19 +164,19 @@ export function ScoopDetail() {
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <Box className="w-7 h-7" />
+          <Box className="w-7 h-7 text-teal-600" />
           <div>
             <h1 className="text-2xl font-bold">{scoop.application}</h1>
             <p className="text-sm text-slate-500 font-mono">{scoop.name}</p>
           </div>
-          <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusClass[scoop.status]}`}>
+          <span className={`badge ${statusClass[scoop.status]}`}>
             {scoop.status_label}
           </span>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => navigate(`/scoops?edit=${scoop.id}`)}
-            className="px-3 py-1.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
+            className="btn-secondary"
           >
             <Pencil className="w-4 h-4" />
             Edit
@@ -184,7 +184,7 @@ export function ScoopDetail() {
           <button
             onClick={() => void load()}
             disabled={loading || busy !== null}
-            className="px-3 py-1.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-50"
+            className="btn-secondary"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -193,13 +193,13 @@ export function ScoopDetail() {
       </div>
 
       {/* Acciones principales */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-4 mb-6">
+      <div className="card p-4 mb-6">
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Actions</h2>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={handleDeploy}
             disabled={busy !== null}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
+            className="btn-primary"
           >
             <Rocket className="w-4 h-4" />
             {busy === 'deploy' ? 'Deploying...' : 'Deploy'}
@@ -207,7 +207,7 @@ export function ScoopDetail() {
           <button
             onClick={handleUndeploy}
             disabled={busy !== null || !status?.deployed}
-            className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-50"
+            className="btn-secondary"
           >
             <Undo2 className="w-4 h-4" />
             {busy === 'undeploy' ? 'Undeploying...' : 'Undeploy'}
@@ -215,7 +215,7 @@ export function ScoopDetail() {
           <button
             onClick={handleDryRun}
             disabled={busy !== null}
-            className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-50"
+            className="btn-secondary"
           >
             <CheckCircle2 className="w-4 h-4" />
             Dry run
@@ -223,7 +223,7 @@ export function ScoopDetail() {
           <button
             onClick={handlePreview}
             disabled={busy !== null}
-            className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-50"
+            className="btn-secondary"
           >
             <FileCode className="w-4 h-4" />
             Preview manifests
@@ -231,7 +231,7 @@ export function ScoopDetail() {
           <button
             onClick={handleLogs}
             disabled={busy !== null || !status?.pods?.length}
-            className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-50"
+            className="btn-secondary"
           >
             <ScrollText className="w-4 h-4" />
             Get logs
@@ -240,7 +240,7 @@ export function ScoopDetail() {
       </div>
 
       {/* Estado en el cluster */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-4 mb-6">
+      <div className="card p-4 mb-6">
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
           Cluster status
           {status && <span className="text-xs font-normal text-slate-500 ml-2">namespace: {status.namespace}</span>}
@@ -257,19 +257,19 @@ export function ScoopDetail() {
               <Stat label="Message" value={status.message ?? '-'} />
             </div>
             {status.pods.length > 0 && (
-              <table className="w-full text-sm">
-                <thead className="text-xs uppercase text-slate-500 border-b border-slate-200 dark:border-slate-700">
+              <table className="table">
+                <thead>
                   <tr>
-                    <th className="text-left py-2">Pod</th>
-                    <th className="text-left py-2">Phase</th>
-                    <th className="text-left py-2">Ready</th>
-                    <th className="text-left py-2">Restarts</th>
-                    <th className="text-left py-2">Reason</th>
+                    <th className="th">Pod</th>
+                    <th className="th">Phase</th>
+                    <th className="th">Ready</th>
+                    <th className="th">Restarts</th>
+                    <th className="th">Reason</th>
                   </tr>
                 </thead>
                 <tbody>
                   {status.pods.map((p) => (
-                    <tr key={p.name} className="border-t border-slate-100 dark:border-slate-700">
+                    <tr key={p.name} className="tr">
                       <td className="py-2 font-mono">{p.name}</td>
                       <td className="py-2">{p.phase}</td>
                       <td className="py-2">{p.ready}</td>
@@ -287,7 +287,7 @@ export function ScoopDetail() {
       </div>
 
       {/* Especificacion del scoop */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-4 mb-6">
+      <div className="card p-4 mb-6">
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Specification</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat label="Type" value={scoop.type} />
@@ -319,19 +319,19 @@ export function ScoopDetail() {
       )}
 
       {actionKind === 'deployResult' && deployResult && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-4 mb-6">
+        <div className="card p-4 mb-6">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Deploy result</h2>
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-slate-500 border-b border-slate-200 dark:border-slate-700">
+          <table className="table">
+            <thead>
               <tr>
-                <th className="text-left py-2">Kind</th>
-                <th className="text-left py-2">Name</th>
-                <th className="text-left py-2">Action</th>
+                <th className="th">Kind</th>
+                <th className="th">Name</th>
+                <th className="th">Action</th>
               </tr>
             </thead>
             <tbody>
               {deployResult.map((r, i) => (
-                <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+                <tr key={i} className="tr">
                   <td className="py-2">{r.kind}</td>
                   <td className="py-2 font-mono">{r.name}</td>
                   <td className="py-2">{r.action}</td>
@@ -343,18 +343,18 @@ export function ScoopDetail() {
       )}
 
       {actionKind === 'preview' && manifestPreview && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-4 mb-6">
+        <div className="card p-4 mb-6">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
             Manifests preview
             <span className="text-xs font-normal text-slate-500 ml-2">namespace: {manifestPreview.namespace}</span>
           </h2>
           {manifestPreview.manifests.map((m, i) => (
-            <details key={i} className="mb-2 border border-slate-200 dark:border-slate-700 rounded-lg">
-              <summary className="cursor-pointer px-3 py-2 bg-slate-50 dark:bg-slate-900/40 text-sm font-medium flex items-center gap-2">
+            <details key={i} className="mb-2 border border-slate-200/80 dark:border-slate-800 rounded-xl">
+              <summary className="cursor-pointer px-3 py-2 bg-slate-50 dark:bg-slate-800/60 text-sm font-medium flex items-center gap-2">
                 <FileCode className="w-4 h-4" />
                 {m.kind} / {m.metadata.name}
               </summary>
-              <pre className="p-3 text-xs overflow-x-auto bg-slate-50 dark:bg-slate-900/60 rounded-b-lg">
+              <pre className="p-3 text-xs overflow-x-auto bg-slate-50 dark:bg-slate-900/60 rounded-b-xl">
                 {JSON.stringify(m, null, 2)}
               </pre>
             </details>
@@ -363,7 +363,7 @@ export function ScoopDetail() {
       )}
 
       {actionKind === 'logs' && logs && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-4 mb-6">
+        <div className="card p-4 mb-6">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
             Logs
             <span className="text-xs font-normal text-slate-500 ml-2">tail 100 lines</span>
@@ -372,11 +372,11 @@ export function ScoopDetail() {
             <p className="text-sm text-slate-500">No logs available.</p>
           ) : (
             logs.map((entry) => (
-              <details key={entry.pod} className="mb-2 border border-slate-200 dark:border-slate-700 rounded-lg">
-                <summary className="cursor-pointer px-3 py-2 bg-slate-50 dark:bg-slate-900/40 text-sm font-medium font-mono">
+              <details key={entry.pod} className="mb-2 border border-slate-200/80 dark:border-slate-800 rounded-xl">
+                <summary className="cursor-pointer px-3 py-2 bg-slate-50 dark:bg-slate-800/60 text-sm font-medium font-mono">
                   {entry.pod}
                 </summary>
-                <pre className="p-3 text-xs overflow-x-auto bg-slate-900 text-green-300 rounded-b-lg max-h-96 overflow-y-auto">
+                <pre className="p-3 text-xs overflow-x-auto bg-slate-900 text-green-300 rounded-b-xl max-h-96 overflow-y-auto">
                   {entry.logs || '(empty)'}
                 </pre>
               </details>

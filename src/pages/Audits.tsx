@@ -98,10 +98,10 @@ export function Audits() {
   const filtered = useMemo(() => audits.filter((a) => matches(a, debouncedQ)), [audits, debouncedQ]);
 
   return (
-    <div className="p-6">
+    <div className="p-4 lg:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <Clock className="w-7 h-7" />
+        <h1 className="page-title">
+          <Clock />
           Audits
         </h1>
         <div className="text-sm text-slate-500 dark:text-slate-400">
@@ -109,7 +109,7 @@ export function Audits() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 mb-4 p-3 flex items-center gap-3">
+      <div className="card mb-4 p-3 flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -117,12 +117,12 @@ export function Audits() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar en id, user, action, entity, old_data, new_data..."
-            className="w-full pl-10 pr-10 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200"
+            className="input pl-10 pr-10"
           />
           {q && (
             <button
               onClick={() => setQ('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
               title="Limpiar"
             >
               <X className="w-4 h-4 text-slate-400" />
@@ -132,7 +132,7 @@ export function Audits() {
         <select
           value={limit}
           onChange={(e) => load(1, Number(e.target.value), debouncedQ)}
-          className="px-2 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+          className="input w-auto"
         >
           <option value={10}>10</option>
           <option value={20}>20</option>
@@ -142,12 +142,12 @@ export function Audits() {
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg p-3 mb-4 border border-red-200 dark:border-red-800 text-sm">
+        <div className="alert alert-red mb-4">
           {error}
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="card overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-slate-600 dark:text-slate-400">Cargando…</div>
         ) : filtered.length === 0 ? (
@@ -156,16 +156,16 @@ export function Audits() {
           </div>
         ) : (
           <>
-            <table className="w-full">
-              <thead className="bg-slate-50 dark:bg-slate-700">
+            <table className="table">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-600 dark:text-slate-300">ID</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-600 dark:text-slate-300">Fecha</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-600 dark:text-slate-300">User</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-600 dark:text-slate-300">Action</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-600 dark:text-slate-300">Entity</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-600 dark:text-slate-300">Entity ID</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-600 dark:text-slate-300"></th>
+                  <th className="th">ID</th>
+                  <th className="th">Fecha</th>
+                  <th className="th">User</th>
+                  <th className="th">Action</th>
+                  <th className="th">Entity</th>
+                  <th className="th">Entity ID</th>
+                  <th className="th text-right"></th>
                 </tr>
               </thead>
               <tbody>
@@ -173,45 +173,43 @@ export function Audits() {
                   const isOpen = expanded === a.id;
                   return (
                     <Fragment key={a.id}>
-                      <tr
-                        className="border-t border-slate-100 dark:border-slate-700 align-top"
-                      >
-                        <td className="px-3 py-2 text-sm font-mono text-slate-500 dark:text-slate-400">{highlight(String(a.id), debouncedQ)}</td>
-                        <td className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                      <tr className="tr align-top">
+                        <td className="td font-mono text-slate-500">{highlight(String(a.id), debouncedQ)}</td>
+                        <td className="td text-slate-500 whitespace-nowrap">
                           {new Date(a.created_at + 'Z').toLocaleString()}
                         </td>
-                        <td className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400">{highlight(a.user_id ?? 'unknown', debouncedQ)}</td>
-                        <td className="px-3 py-2 text-sm">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${actionClass(a.action)}`}>
+                        <td className="td text-slate-500">{highlight(a.user_id ?? 'unknown', debouncedQ)}</td>
+                        <td className="td">
+                          <span className={`badge ${actionClass(a.action)}`}>
                             {highlight(a.action, debouncedQ)}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-sm text-slate-700 dark:text-slate-200">{highlight(a.entity_type, debouncedQ)}</td>
-                        <td className="px-3 py-2 text-sm font-mono text-slate-600 dark:text-slate-400 max-w-[12rem] truncate" title={a.entity_id}>
+                        <td className="td text-slate-700 dark:text-slate-200">{highlight(a.entity_type, debouncedQ)}</td>
+                        <td className="td font-mono text-slate-500 max-w-[12rem] truncate" title={a.entity_id}>
                           {highlight(a.entity_id, debouncedQ)}
                         </td>
-                        <td className="px-3 py-2 text-right">
+                        <td className="td text-right">
                           <button
                             onClick={() => setExpanded(isOpen ? null : a.id)}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 inline-flex items-center gap-1 text-xs"
+                            className="link inline-flex items-center gap-1 text-xs"
                           >
                             <Eye className="w-3 h-3" /> {isOpen ? 'Ocultar' : 'Detalle'}
                           </button>
                         </td>
                       </tr>
                       {isOpen && (
-                        <tr className="bg-slate-50 dark:bg-slate-900/40">
+                        <tr className="bg-slate-50 dark:bg-slate-800/40">
                           <td colSpan={7} className="px-4 py-3">
                             <div className="grid md:grid-cols-2 gap-4 text-xs">
                               <div>
-                                <div className="font-semibold text-slate-600 dark:text-slate-300 mb-1">old_data</div>
-                                <pre className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 overflow-auto max-h-48 text-slate-700 dark:text-slate-300">
+                                <div className="font-semibold text-slate-500 dark:text-slate-400 mb-1">old_data</div>
+                                <pre className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-2 overflow-auto max-h-48 text-slate-700 dark:text-slate-300">
                                   {a.old_data ? JSON.stringify(a.old_data, null, 2) : '—'}
                                 </pre>
                               </div>
                               <div>
-                                <div className="font-semibold text-slate-600 dark:text-slate-300 mb-1">new_data</div>
-                                <pre className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 overflow-auto max-h-48 text-slate-700 dark:text-slate-300">
+                                <div className="font-semibold text-slate-500 dark:text-slate-400 mb-1">new_data</div>
+                                <pre className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-2 overflow-auto max-h-48 text-slate-700 dark:text-slate-300">
                                   {a.new_data ? JSON.stringify(a.new_data, null, 2) : '—'}
                                 </pre>
                               </div>
@@ -224,7 +222,7 @@ export function Audits() {
                 })}
               </tbody>
             </table>
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-800">
               <div className="text-sm text-slate-600 dark:text-slate-400">
                 Página {page} de {totalPages} · {total} registros
               </div>
@@ -232,7 +230,7 @@ export function Audits() {
                 <button
                   onClick={() => load(page - 1, limit, debouncedQ)}
                   disabled={page === 1 || loading}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300"
+                  className="btn-secondary"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   Anterior
@@ -240,7 +238,7 @@ export function Audits() {
                 <button
                   onClick={() => load(page + 1, limit, debouncedQ)}
                   disabled={page === totalPages || loading}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300"
+                  className="btn-secondary"
                 >
                   Siguiente
                   <ChevronRight className="w-4 h-4" />
@@ -256,12 +254,12 @@ export function Audits() {
 
 function actionClass(action: string): string {
   if (action === 'create' || action === 'deploy')
-    return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
+    return 'badge-green';
   if (action === 'update')
-    return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
+    return 'badge-blue';
   if (action === 'delete' || action === 'undeploy')
-    return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+    return 'badge-red';
   if (action === 'status')
-    return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
-  return 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300';
+    return 'badge-amber';
+  return 'badge-gray';
 }
