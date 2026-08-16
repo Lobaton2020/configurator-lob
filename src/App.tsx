@@ -9,6 +9,8 @@ import { Scoops } from './pages/Scoops';
 import { ScoopNew } from './pages/ScoopNew';
 import { ScoopDetail } from './pages/ScoopDetail';
 import { Cluster } from './pages/Cluster';
+import { ConfigStore } from './pages/ConfigStore';
+import { Secrets } from './pages/Secrets';
 import { Login } from './pages/Login';
 import { AuthProvider } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
@@ -99,6 +101,26 @@ function App() {
                 <RequireAuth>
                   <Layout>
                     <ScoopDetail />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/configstore"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <ConfigStore />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/secrets"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <Secrets />
                   </Layout>
                 </RequireAuth>
               }

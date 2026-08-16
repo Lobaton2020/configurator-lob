@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api, type Schema } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import { Settings, FileText, ChevronDown, ChevronRight, Moon, Sun, Box, Server, LogOut, Menu, X, Leaf, LayoutDashboard, Clock } from 'lucide-react';
+import { Settings, FileText, ChevronDown, ChevronRight, Moon, Sun, Box, Server, LogOut, Menu, X, Leaf, LayoutDashboard, Clock, FileCog, KeyRound } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -149,6 +149,10 @@ export function Layout({ children }: LayoutProps) {
                   <Box className="w-5 h-5" />
                   New Scoop
                 </Link>
+                <Link to="/configstore" className={navItem('/configstore', true)}>
+                  <FileCog className="w-5 h-5" />
+                  Config Store
+                </Link>
                 <Link to="/audits" className={navItem('/audits', true)}>
                   <Clock className="w-5 h-5" />
                   Audits
@@ -160,6 +164,11 @@ export function Layout({ children }: LayoutProps) {
           <Link to="/cluster" className={navItem('/cluster', true)}>
             <Server className="w-5 h-5" />
             Cluster
+          </Link>
+
+          <Link to="/secrets" className={navItem('/secrets', true)}>
+            <KeyRound className="w-5 h-5" />
+            Secretos del sistema
           </Link>
         </nav>
       </aside>
