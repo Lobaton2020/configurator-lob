@@ -20,6 +20,8 @@ import { AuthProvider } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
 import { WorkspaceProvider } from './auth/WorkspaceContext';
 import { RequireWorkspace } from './auth/WorkspaceRequire';
+import { AppProvider } from './auth/AppContext';
+import { RequireApp } from './auth/AppRequire';
 
 const GOOGLE_CLIENT_ID_FALLBACK =
   (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_GOOGLE_CLIENT_ID ?? '';
@@ -32,31 +34,41 @@ function Protected() {
   );
 }
 
+function GatedResources() {
+  return <RequireApp />;
+}
+
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID_FALLBACK}>
       <BrowserRouter>
         <AuthProvider>
           <WorkspaceProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route element={<Protected />}>
-                <Route path="/" element={<Layout><Dashboard /></Layout>} />
-                <Route path="/audits" element={<Layout><Audits /></Layout>} />
-                <Route path="/schemas" element={<Layout><Schemas /></Layout>} />
-                <Route path="/schema/:id" element={<Layout><SchemaDetail /></Layout>} />
-                <Route path="/scoops" element={<Layout><Scoops /></Layout>} />
-                <Route path="/scoops/new" element={<Layout><ScoopNew /></Layout>} />
-                <Route path="/cluster" element={<Layout><Cluster /></Layout>} />
-                <Route path="/scoops/:id" element={<Layout><ScoopDetail /></Layout>} />
-                <Route path="/configstore" element={<Layout><ConfigStore /></Layout>} />
-                <Route path="/secrets" element={<Layout><Secrets /></Layout>} />
-                <Route path="/apps" element={<Layout><Apps /></Layout>} />
-                <Route path="/apps/:id" element={<Layout><AppDetail /></Layout>} />
-                <Route path="/domains" element={<Layout><Domains /></Layout>} />
-                <Route path="/domains/:id" element={<Layout><DomainDetail /></Layout>} />
-              </Route>
-            </Routes>
+            <AppProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route element={<Protected />}>
+                  <Route path="/" element={<Layout><Dashboard /></Layout>} />
+                  <Route path="/audits" element={<Layout><Audits /></Layout>} />
+                  <Route path="/schemas" element={<Layout><Schemas /></Layout>} />
+                  <Route path="/schema/:id" element={<Layout><SchemaDetail /></Layout>} />
+                  <Route path="/cluster" element={<Layout><Cluster /></Layout>} />
+                  <Route path="/apps" element={<Layout><Apps /></Layout>} />
+                  <Route path="/apps/:id" element={<Layout><AppDetail /></Layout>} />
+                  {/* /scoops/new esta dentro de AppProvider para usar useApp y
+                      pre-rellenar la app activa, pero NO exige app. */}
+                  <Route path="/scoops/new" element={<Layout><ScoopNew /></Layout>} />
+                  <Route element={<GatedResources />}>
+                    <Route path="/scoops" element={<Layout><Scoops /></Layout>} />
+                    <Route path="/scoops/:id" element={<Layout><ScoopDetail /></Layout>} />
+                    <Route path="/configstore" element={<Layout><ConfigStore /></Layout>} />
+                    <Route path="/secrets" element={<Layout><Secrets /></Layout>} />
+                    <Route path="/domains" element={<Layout><Domains /></Layout>} />
+                    <Route path="/domains/:id" element={<Layout><DomainDetail /></Layout>} />
+                  </Route>
+                </Route>
+              </Routes>
+            </AppProvider>
           </WorkspaceProvider>
         </AuthProvider>
       </BrowserRouter>

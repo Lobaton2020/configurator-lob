@@ -10,6 +10,7 @@ import {
   type ScoopForm,
   type ScoopUiType,
 } from '../api/scoops';
+import { useApp } from '../auth/AppContext';
 
 import { RegistryInput } from '../components/RegistryInput';
 
@@ -294,7 +295,11 @@ function Banner({ kind, children }: { kind: 'error' | 'warn'; children: React.Re
 
 export function ScoopNew() {
   const navigate = useNavigate();
-  const [form, setForm] = useState<ScoopForm>(emptyForm);
+  const { app } = useApp();
+  const [form, setForm] = useState<ScoopForm>(() => ({
+    ...emptyForm,
+    application: app?.slug ?? '',
+  }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

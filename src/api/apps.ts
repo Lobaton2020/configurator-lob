@@ -14,6 +14,7 @@ export interface Application {
   scoops_count: number;
   domains_count: number;
   namespace: string;
+  workspace_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -41,11 +42,24 @@ export interface ApplicationList {
   pages: number;
 }
 
+export interface ApplicationListOpts {
+  page?: number;
+  limit?: number;
+  workspace_id?: number;
+}
+
+function buildListQs(opts: ApplicationListOpts): string {
+  const params = new URLSearchParams();
+  if (opts.page !== undefined) params.set('page', String(opts.page));
+  if (opts.limit !== undefined) params.set('limit', String(opts.limit));
+  if (opts.workspace_id !== undefined) params.set('workspace_id', String(opts.workspace_id));
+  const s = params.toString();
+  return s ? `?${s}` : '';
+}
+
 export const appsApi = {
-  list: (page = 1, limit = 20) =>
-    laurelFetch<ApplicationList>(
-      `/api/apps?page=${page}&limit=${limit}`,
-    ),
+  list: (opts: ApplicationListOpts = {}) =>
+    laurelFetch<ApplicationList>(`/api/apps${buildListQs(opts)}`),
 
   get: (id: number) =>
     laurelFetch<Application>(`/api/apps/${id}`),
