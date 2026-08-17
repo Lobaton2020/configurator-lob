@@ -86,7 +86,7 @@ export function Scoops() {
   const confirm = async () => {
     const next: Record<string, string> = {};
     if (!form.application.trim()) next.application = 'Application is required';
-    if (!form.url_registry.trim()) next.url_registry = 'URL Registry is required';
+    if (!(form.url_registry ?? '').trim()) next.url_registry = 'URL Registry is required';
     if (form.min_replicas < 0) next.min_replicas = 'Must be >= 0';
     if (form.max_replicas < form.min_replicas) next.max_replicas = 'Must be >= min_replicas';
     setErrors(next);
@@ -370,7 +370,7 @@ export function Scoops() {
                 <div>
                   <label className={labelClass}>URL Registry</label>
                   <RegistryInput
-                    value={form.url_registry}
+                    value={form.url_registry ?? ''}
                     onChange={(v) => setForm({ ...form, url_registry: v })}
                     className={inputClass}
                   />

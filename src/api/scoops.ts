@@ -67,9 +67,16 @@ export interface Scoop {
 }
 
 export type ScoopForm = {
+  /** Slug de la Application (sigue siendo la fuente de verdad del backend
+   *  en el path); cuando viene de la UI, se rellena desde la app global. */
   application: string;
+  /** ID preferido por el backend: si llega, el scoop se vincula a esta app
+   *  y `url_registry` se autoderiva del `docker_image_base` de la app. */
+  application_id?: number;
   type: ScoopUiType;
-  url_registry: string;
+  /** Solo para scoops SIN app (legacy). Cuando hay app, el backend lo ignora
+   *  y usa el docker_image_base de la app + `version` como tag. */
+  url_registry?: string;
   is_productive: boolean;
   version?: string | null;
   requested_vcpu: number;
@@ -209,10 +216,9 @@ function toScoop(dto: ComponentDto): Scoop {
 }
 
 function toPayload(form: ScoopForm): Record<string, unknown> {
-  return {
+  const payload: Record<string, unknown> = {
     application: form.application,
     type: toApiType(form.type),
-    url_registry: form.url_registry,
     is_productive: form.is_productive,
     requested_vcpu: toCpuQuantity(form.requested_vcpu),
     requested_memory: toMemoryQuantity(form.requested_memory),
@@ -222,6 +228,13 @@ function toPayload(form: ScoopForm): Record<string, unknown> {
     max_replicas: form.max_replicas,
     env_from: form.env_from ?? [],
   };
+  // Solo mandamos application_id y url_registry si el caller los puso.
+  // El backend prefiere application_id (deriva url_registry del app);
+  // url_registry es un override legacy para scoops sin app.
+  if (form.application_id !== undefined) payload.application_id = form.application_id;
+  if (form.version) payload.version = form.version;
+  if (form.url_registry) payload.url_registry = form.url_registry;
+  return payload;
 }
 
 // ---------- API ----------

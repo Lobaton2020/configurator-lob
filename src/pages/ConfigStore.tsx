@@ -11,12 +11,14 @@ import {
   Pencil,
   ShieldAlert,
   Lock,
+  AppWindow,
 } from 'lucide-react';
 import { ApiError } from '../api/laurel';
 import { configMapsApi, secretsApi, type ConfigMapDetail, type ConfigMapSummary, type SecretDetail, type SecretSummary } from '../api/configstore';
 import { scoopsApi } from '../api/scoops';
 import { appsApi, type Application } from '../api/apps';
 import { clusterApi } from '../api/cluster';
+import { useApp } from '../auth/AppContext';
 
 type Tab = 'configmaps' | 'secrets';
 
@@ -385,13 +387,28 @@ function SecretEditor({ open, initial, appSuggestions, onClose, onSave }: Secret
 
 export function ConfigStore() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { app: globalApp } = useApp();
   const initialTab = (searchParams.get('tab') === 'secrets' ? 'secrets' : 'configmaps') as Tab;
-  const initialApp = searchParams.get('app') ?? '';
+  // El app por defecto es la activa en el header; el caller puede sobreescribir
+  // via ?app=<slug> (ej: link compartido con un scoop concreto). El backend
+  // autoderiva el namespace a `user-apps-<slug>` y filtra por label, asi que
+  // cada app solo ve los ConfigMaps/Secrets que se crearon para ella.
+  const initialApp = searchParams.get('app') ?? globalApp?.slug ?? '';
   const initialNamespace = searchParams.get('namespace') ?? '';
 
   const [tab, setTab] = useState<Tab>(initialTab);
   const [appFilter, setAppFilter] = useState(initialApp);
   const [namespaceFilter, setNamespaceFilter] = useState(initialNamespace);
+
+  // Si cambia la app global y no hay override explicito en la URL, seguimos la app.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const urlOverride = searchParams.get('app');
+    if (!urlOverride && globalApp && appFilter !== globalApp.slug) {
+      setAppFilter(globalApp.slug);
+    }
+  }, [globalApp?.slug, searchParams]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const [cmList, setCmList] = useState<ConfigMapSummary[]>([]);
   const [secretsList, setSecretsList] = useState<SecretSummary[]>([]);
@@ -514,10 +531,18 @@ export function ConfigStore() {
   return (
     <div className="p-4 lg:p-6 text-slate-800 dark:text-white">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <h1 className="page-title">
-          {tab === 'configmaps' ? <FileCog /> : <KeyRound />}
-          Config Store
-        </h1>
+        <div>
+          <h1 className="page-title">
+            {tab === 'configmaps' ? <FileCog /> : <KeyRound />}
+            Config Store
+          </h1>
+          {globalApp && appFilter === globalApp.slug && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 inline-flex items-center gap-1.5">
+              <AppWindow className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              Filtrado por la app global <code className="font-mono">{globalApp.slug}</code>
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button type="button" onClick={() => void load()} disabled={loading} className="btn-secondary">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
