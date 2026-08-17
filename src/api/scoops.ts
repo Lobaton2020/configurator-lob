@@ -78,7 +78,27 @@ export type ScoopForm = {
   limit_memory: number;
   min_replicas: number;
   max_replicas: number;
+  env_from?: EnvFromRef[];
 };
+
+export interface EnvFromRef {
+  type: 'config_map' | 'secret';
+  name: string;
+  namespace?: string | null;
+}
+
+export interface AvailableEnvFromItem {
+  type: 'config_map' | 'secret';
+  name: string;
+  namespace: string;
+  app: string;
+  keys: string[];
+}
+
+export interface AvailableEnvFrom {
+  items: AvailableEnvFromItem[];
+  namespace: string;
+}
 
 export interface Paginated<T> {
   items: T[];
@@ -200,6 +220,7 @@ function toPayload(form: ScoopForm): Record<string, unknown> {
     limit_memory: toMemoryQuantity(form.limit_memory),
     min_replicas: form.min_replicas,
     max_replicas: form.max_replicas,
+    env_from: form.env_from ?? [],
   };
 }
 
@@ -232,6 +253,19 @@ export const scoopsApi = {
       body: payload,
     });
     return toScoop(dto);
+  },
+
+  async availableEnvFrom(opts: {
+    namespace?: string;
+    app?: string;
+    excludeApplication?: string;
+  } = {}): Promise<AvailableEnvFrom> {
+    const params = new URLSearchParams();
+    if (opts.namespace) params.set('namespace', opts.namespace);
+    if (opts.app) params.set('app', opts.app);
+    if (opts.excludeApplication) params.set('exclude_application', opts.excludeApplication);
+    const qs = params.toString() ? `?${params}` : '';
+    return laurelFetch<AvailableEnvFrom>(`/scoops/available-env-from${qs}`);
   },
 
   async remove(id: number, opts: { undeploy?: boolean; force?: boolean; namespace?: string } = {}): Promise<void> {

@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api, type Schema } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import { Settings, FileText, ChevronDown, ChevronRight, Moon, Sun, Box, Server, LogOut, Menu, X, Leaf, LayoutDashboard, Clock, FileCog, KeyRound } from 'lucide-react';
+import { Settings, FileText, ChevronDown, ChevronRight, Moon, Sun, Box, Server, LogOut, Menu, X, Leaf, LayoutDashboard, Clock, FileCog, KeyRound, AppWindow, Globe } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -58,15 +58,15 @@ export function Layout({ children }: LayoutProps) {
   const navItem = (to: string, exact: boolean) =>
     `flex items-center gap-3 px-3.5 py-2.5 rounded-full text-sm font-medium transition-colors ${
       (exact ? location.pathname === to : location.pathname.startsWith(to))
-        ? 'bg-[#e8f0fe] text-[#1a73e8] dark:bg-blue-950/60 dark:text-blue-300'
-        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+        ? 'bg-[#e8f0fe] text-[#1a73e8] dark:bg-neutral-900 text-neutral-50'
+        : 'text-slate-600 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-neutral-900'
     }`;
 
   const sectionToggle = () =>
     `flex items-center justify-between w-full px-3.5 py-2.5 rounded-full text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors`;
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fa] dark:bg-slate-950">
+    <div className="flex min-h-screen bg-[#f8f9fa] dark:bg-black">
       {mobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 lg:hidden"
@@ -76,7 +76,7 @@ export function Layout({ children }: LayoutProps) {
       )}
 
       <aside
-        className={`fixed z-50 inset-y-0 left-0 w-64 bg-white dark:bg-slate-950 border-r border-slate-200/80 dark:border-slate-800 flex flex-col transform transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`fixed z-50 inset-y-0 left-0 w-64 bg-white dark:bg-black border-r border-slate-200/80 dark:border-neutral-900 flex flex-col transform transition-transform duration-200 lg:static lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -140,7 +140,15 @@ export function Layout({ children }: LayoutProps) {
             </button>
 
             {scoopsOpen && (
-              <div className="ml-5 mt-1 space-y-1 border-l border-slate-200 dark:border-slate-800 pl-3">
+              <div className="ml-5 mt-1 space-y-1 border-l border-slate-200 dark:border-neutral-800 pl-3">
+                <Link to="/apps" className={navItem('/apps', false)}>
+                  <AppWindow className="w-5 h-5" />
+                  Apps
+                </Link>
+                <Link to="/domains" className={navItem('/domains', false)}>
+                  <Globe className="w-5 h-5" />
+                  Domains
+                </Link>
                 <Link to="/scoops" className={navItem('/scoops', false)}>
                   <Box className="w-5 h-5" />
                   Scoops
@@ -151,7 +159,11 @@ export function Layout({ children }: LayoutProps) {
                 </Link>
                 <Link to="/configstore" className={navItem('/configstore', true)}>
                   <FileCog className="w-5 h-5" />
-                  Config Store
+                  Configs
+                </Link>
+                <Link to="/secrets" className={navItem('/secrets', false)}>
+                  <KeyRound className="w-5 h-5" />
+                  Secrets
                 </Link>
                 <Link to="/audits" className={navItem('/audits', true)}>
                   <Clock className="w-5 h-5" />
@@ -165,16 +177,11 @@ export function Layout({ children }: LayoutProps) {
             <Server className="w-5 h-5" />
             Cluster
           </Link>
-
-          <Link to="/secrets" className={navItem('/secrets', true)}>
-            <KeyRound className="w-5 h-5" />
-            Secretos del sistema
-          </Link>
         </nav>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-4 gap-3">
+        <header className="h-16 bg-white dark:bg-black border-b border-slate-200/80 dark:border-neutral-900 flex items-center justify-between px-4 gap-3">
           <button
             onClick={() => setMobileOpen(true)}
             className="lg:hidden p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
