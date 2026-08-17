@@ -15,6 +15,8 @@ import {
 import { ApiError } from '../api/laurel';
 import { configMapsApi, secretsApi, type ConfigMapDetail, type ConfigMapSummary, type SecretDetail, type SecretSummary } from '../api/configstore';
 import { scoopsApi } from '../api/scoops';
+import { appsApi, type Application } from '../api/apps';
+import { clusterApi } from '../api/cluster';
 
 type Tab = 'configmaps' | 'secrets';
 
@@ -394,6 +396,8 @@ export function ConfigStore() {
   const [cmList, setCmList] = useState<ConfigMapSummary[]>([]);
   const [secretsList, setSecretsList] = useState<SecretSummary[]>([]);
   const [appSuggestions, setAppSuggestions] = useState<string[]>([]);
+  const [apps, setApps] = useState<Application[]>([]);
+  const [userNamespaces, setUserNamespaces] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -435,6 +439,22 @@ export function ConfigStore() {
   }, [namespaceFilter, appFilter]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Carga las opciones de los dropdowns de filtros.
+  useEffect(() => {
+    appsApi
+      .list(1, 1000)
+      .then((d) => setApps(d.items))
+      .catch(() => undefined);
+    clusterApi
+      .namespaces()
+      .then((nsList) =>
+        setUserNamespaces(
+          nsList.map((ns) => ns.name).filter((n) => n.startsWith('user-apps')).sort(),
+        ),
+      )
+      .catch(() => undefined);
+  }, []);
 
   const onEditCM = async (row: ConfigMapSummary) => {
     try {
@@ -527,27 +547,35 @@ export function ConfigStore() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className={labelClass}>Filtrar por application</label>
-            <input
-              type="text"
-              list="configstore-app-filter"
+            <select
+              className={inputClass}
               value={appFilter}
               onChange={(e) => setAppFilter(e.target.value)}
-              className={inputClass}
-              placeholder="(todas)"
-            />
-            <datalist id="configstore-app-filter">
-              {appSuggestions.map((a) => <option key={a} value={a} />)}
-            </datalist>
+            >
+              <option value="">(todas)</option>
+              {appFilter && !apps.some((a) => a.slug === appFilter) && (
+                <option value={appFilter}>{appFilter}</option>
+              )}
+              {apps.map((a) => (
+                <option key={a.slug} value={a.slug}>{a.name} ({a.slug})</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className={labelClass}>Namespace</label>
-            <input
-              type="text"
+            <select
+              className={inputClass}
               value={namespaceFilter}
               onChange={(e) => setNamespaceFilter(e.target.value)}
-              className={inputClass}
-              placeholder="(default)"
-            />
+            >
+              <option value="">(default)</option>
+              {namespaceFilter && !userNamespaces.includes(namespaceFilter) && (
+                <option value={namespaceFilter}>{namespaceFilter}</option>
+              )}
+              {userNamespaces.map((ns) => (
+                <option key={ns} value={ns}>{ns}</option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
