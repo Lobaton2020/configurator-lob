@@ -33,9 +33,11 @@ export class ApiError extends Error {
   }
 }
 
-const LAUREL_BASE =
+// Los endpoints usan path absoluto `/api/...`; la base solo debe ser el origin.
+const LAUREL_ORIGIN =
   ((import.meta as unknown as { env?: Record<string, string> }).env?.VITE_LAUREL_API as string) ||
-  'http://localhost:5002/api';
+  'http://localhost:5002';
+const LAUREL_BASE = LAUREL_ORIGIN.replace(/\/+$/, '').replace(/\/api$/, '');
 
 const TOKEN_KEY = 'laurel.jwt';
 
