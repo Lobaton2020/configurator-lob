@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, Box, FileCog, KeyRound, Loader2, Search, X } from 'lucide-react';
+import { AlertCircle, AppWindow, Box, FileCog, KeyRound, Loader2, Search, Tag, X } from 'lucide-react';
 import {
   ApiError,
   scoopsApi,
@@ -12,13 +12,10 @@ import {
 } from '../api/scoops';
 import { useApp } from '../auth/AppContext';
 
-import { RegistryInput } from '../components/RegistryInput';
-
-const emptyForm: ScoopForm = {
-  application: '',
+const emptyForm: Omit<ScoopForm, 'application' | 'application_id'> = {
   type: 'Web',
-  url_registry: '',
   is_productive: false,
+  version: '',
   requested_vcpu: 0.1,
   requested_memory: 64,
   limit_vcpu: 0.5,
@@ -72,11 +69,11 @@ type EnvFromTab = 'all' | 'config_map' | 'secret';
 function EnvFromPicker({
   selected,
   onChange,
-  application,
+  appSlug,
 }: {
   selected: EnvFromRef[];
   onChange: (next: EnvFromRef[]) => void;
-  application: string;
+  appSlug: string;
 }) {
   const [tab, setTab] = useState<EnvFromTab>('all');
   const [search, setSearch] = useState('');
@@ -84,16 +81,18 @@ function EnvFromPicker({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargamos cada vez que cambia el `application` (que define el namespace efectivo
-  // por convencion) o el filtro principal.
+  // Cargamos cada vez que cambia la app activa. El backend autoderiva
+  // el namespace a `user-apps-<app>` y filtra por el label de la app:
+  // cada app solo ve los ConfigMaps y Secrets que se crearon para ella.
   useEffect(() => {
+    if (!appSlug) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
     scoopsApi
       .availableEnvFrom({
-        namespace: 'prod',
-        excludeApplication: application,
+        app: appSlug,
+        excludeApplication: appSlug,
       })
       .then((res) => {
         if (cancelled) return;
@@ -109,7 +108,7 @@ function EnvFromPicker({
     return () => {
       cancelled = true;
     };
-  }, [application]);
+  }, [appSlug]);
 
   const items: AvailableEnvFromItem[] = (data?.items ?? [])
     .filter((it) =>
@@ -157,9 +156,11 @@ function EnvFromPicker({
         )}
       </div>
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-        Recursos pre-creados en el namespace <code className="text-slate-700 dark:text-slate-300">prod</code> que
-        se inyectaran en el contenedor. Los propios del application (<code>{application || '<application>'}</code>
-        -config / -secret) ya se incluyen automaticamente y aqui se ocultan.
+        ConfigMaps y Secrets creados previamente para esta app
+        (<code className="text-slate-700 dark:text-slate-300">{appSlug || '<app>'}</code>)
+        en su namespace. Los propios del app
+        (<code>{appSlug || '<app>'}-config</code> / <code>-secret</code>)
+        ya se incluyen automaticamente y aqui se ocultan.
       </p>
 
       <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -212,7 +213,7 @@ function EnvFromPicker({
 
       {items.length === 0 && !loading && (
         <p className="text-sm text-slate-500 py-3">
-          No hay ConfigMaps ni Secrets disponibles para este application.
+          No hay ConfigMaps ni Secrets disponibles para esta app.
         </p>
       )}
 
@@ -299,6 +300,7 @@ export function ScoopNew() {
   const [form, setForm] = useState<ScoopForm>(() => ({
     ...emptyForm,
     application: app?.slug ?? '',
+    application_id: app?.id,
   }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -310,8 +312,7 @@ export function ScoopNew() {
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const next: Record<string, string> = {};
-    if (!form.application.trim()) next.application = 'Application is required';
-    if (!form.url_registry.trim()) next.url_registry = 'URL Registry is required';
+    if (!app) next.app = 'Selecciona una app antes de crear un scoop';
     if (form.min_replicas < 0) next.min_replicas = 'Must be >= 0';
     if (form.max_replicas < form.min_replicas) next.max_replicas = 'Must be >= min_replicas';
     setErrors(next);
@@ -334,6 +335,13 @@ export function ScoopNew() {
       setSaving(false);
     }
   };
+
+  // El registry es IMPLICITO al app global: el backend lo deriva como
+  // `<docker_image_base>:<version|latest>`. Mostramos lo que se va a usar
+  // para que el usuario vea de donde sale.
+  const derivedRegistry = app?.docker_image_base
+    ? `${app.docker_image_base}:${form.version?.trim() || 'latest'}`
+    : null;
 
   return (
     <div className="p-4 lg:p-6 text-slate-800 dark:text-white">
@@ -358,16 +366,25 @@ export function ScoopNew() {
           className="card p-6"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Application *</label>
-              <input
-                type="text"
-                value={form.application}
-                onChange={(e) => set('application', e.target.value)}
-                placeholder="mi-aplicacion"
-                className={inputClass}
-              />
-              {errors.application && <p className="text-xs text-red-600 mt-1">{errors.application}</p>}
+            <div className="md:col-span-2">
+              <label className={labelClass}>App</label>
+              {app ? (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-950/30">
+                  <AppWindow className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="font-semibold text-slate-800 dark:text-white truncate">
+                    {app.name}
+                  </span>
+                  <code className="text-xs text-slate-500 dark:text-slate-400">{app.slug}</code>
+                  <span className="ml-auto text-[11px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">
+                    App global activa
+                  </span>
+                </div>
+              ) : (
+                <div className="px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-sm text-amber-800 dark:text-amber-200">
+                  No hay app seleccionada. Elegi una en el header antes de crear un scoop.
+                </div>
+              )}
+              {errors.app && <p className="text-xs text-red-600 mt-1">{errors.app}</p>}
             </div>
 
             <div>
@@ -382,14 +399,37 @@ export function ScoopNew() {
               </select>
             </div>
 
-            <div className="md:col-span-2">
-              <label className={labelClass}>URL Registry *</label>
-              <RegistryInput
-                value={form.url_registry}
-                onChange={(v) => set('url_registry', v)}
+            <div>
+              <label className={labelClass}>Version</label>
+              <input
+                type="text"
+                value={form.version ?? ''}
+                onChange={(e) => set('version', e.target.value)}
+                placeholder="latest"
                 className={inputClass}
               />
-              {errors.url_registry && <p className="text-xs text-red-600 mt-1">{errors.url_registry}</p>}
+              <p className="text-xs text-slate-500 mt-1">
+                Tag de la imagen. Si lo dejas vacio, se usa <code>latest</code>.
+              </p>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className={labelClass}>URL Registry</label>
+              <div className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 font-mono text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <Tag className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">
+                  {derivedRegistry ?? (
+                    <span className="text-amber-600 dark:text-amber-400 italic">
+                      La app no tiene docker_image_base definido. Edita la app para asignarle uno.
+                    </span>
+                  )}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Se deriva automaticamente del <code>docker_image_base</code> de la app
+                + el <code>version</code> de este scoop. No se puede editar aca: para
+                cambiar el registry, edita la app.
+              </p>
             </div>
 
             <div className="md:col-span-2">
@@ -413,7 +453,7 @@ export function ScoopNew() {
               <EnvFromPicker
                 selected={form.env_from ?? []}
                 onChange={(next) => set('env_from', next)}
-                application={form.application}
+                appSlug={app?.slug ?? ''}
               />
             </div>
 
@@ -474,7 +514,7 @@ export function ScoopNew() {
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !app}
               className="btn-primary"
             >
               {saving ? 'Creating...' : 'Create Scoop'}
