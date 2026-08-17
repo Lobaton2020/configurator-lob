@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   ShieldX,
   ShieldAlert,
+  FileCog,
 } from 'lucide-react';
 import {
   ApiError,
@@ -25,6 +26,8 @@ import {
   type Scoop,
   type ScoopStatusReport,
 } from '../api/scoops';
+import { DeployPanel } from '../components/DeployPanel';
+import { useDeployPolling } from '../hooks/useDeployPolling';
 
 type ActionKind = 'preview' | 'logs' | 'deployResult' | 'certificate' | 'none';
 
@@ -64,6 +67,17 @@ export function ScoopDetail() {
   const [certificate, setCertificate] = useState<CertificateReport | null>(null);
   const [certLogs, setCertLogs] = useState<PodLogEntry[] | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [deploying, setDeploying] = useState(false);
+
+  const deployDone = (st: ScoopStatusReport) =>
+    st.deployed === true &&
+    ((st.available_replicas ?? 0) >= (st.desired_replicas ?? 0) || Boolean(st.message));
+
+  const deployPoll = useDeployPolling<ScoopStatusReport>(
+    () => scoopsApi.status(scoopId),
+    deployDone,
+    { enabled: deploying },
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,8 +117,15 @@ export function ScoopDetail() {
     const result = await scoopsApi.deploy(scoopId, {});
     setDeployResult(result.resources);
     setActionKind('deployResult');
-    await load();
+    setDeploying(true);
   });
+
+  const closeDeployPanel = () => {
+    setDeploying(false);
+    setActionKind('none');
+    setDeployResult(null);
+    void load();
+  };
 
   const handleUndeploy = () => {
     if (!window.confirm(`Eliminar los recursos de "${scoop?.application}" del cluster?`)) return;
@@ -112,6 +133,7 @@ export function ScoopDetail() {
       await scoopsApi.undeploy(scoopId);
       setDeployResult(null);
       setActionKind('none');
+      setDeploying(false);
       await load();
     });
   };
@@ -120,6 +142,7 @@ export function ScoopDetail() {
     const result = await scoopsApi.deploy(scoopId, { dryRun: true });
     setDeployResult(result.resources);
     setActionKind('deployResult');
+    setDeploying(false);
   });
 
   const handlePreview = () => runAction('preview', async () => {
@@ -267,6 +290,56 @@ export function ScoopDetail() {
         </div>
       </div>
 
+      {/* Deploy en vivo */}
+      {deploying && (
+        <DeployPanel
+          title="Deploying scoop"
+          data={deployPoll.data}
+          loading={deployPoll.loading}
+          error={deployPoll.error}
+          done={deployPoll.done}
+          onClose={closeDeployPanel}
+        >
+          {(st) => (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <Stat label="Deployed" value={st.deployed ? 'Yes' : 'No'} />
+                <Stat label="Replicas" value={
+                  st.desired_replicas === null ? '-' :
+                  `${st.ready_replicas ?? 0}/${st.desired_replicas}`
+                } />
+                <Stat label="Available" value={st.available_replicas ?? '-'} />
+                <Stat label="Message" value={st.message ?? '-'} />
+              </div>
+              {st.pods.length > 0 && (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th className="th">Pod</th>
+                      <th className="th">Phase</th>
+                      <th className="th">Ready</th>
+                      <th className="th">Restarts</th>
+                      <th className="th">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {st.pods.map((p) => (
+                      <tr key={p.name} className="tr">
+                        <td className="td font-mono">{p.name}</td>
+                        <td className="td">{p.phase}</td>
+                        <td className="td">{p.ready}</td>
+                        <td className="td">{p.restarts}</td>
+                        <td className="td text-red-600">{p.reason ?? '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          )}
+        </DeployPanel>
+      )}
+
       {/* Estado en el cluster */}
       <div className="card p-4 mb-6">
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
@@ -335,6 +408,16 @@ export function ScoopDetail() {
           <Stat label="Replicas" value={`${scoop.min_replicas} / ${scoop.max_replicas}`} />
           <Stat label="CPU req / lim" value={`${scoop.requested_vcpu} / ${scoop.limit_vcpu}`} />
           <Stat label="Memory req / lim" value={`${scoop.requested_memory}M / ${scoop.limit_memory}M`} />
+        </div>
+        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-2">
+          <Link
+            to={`/configstore?app=${encodeURIComponent(scoop.application)}&namespace=${encodeURIComponent(scoop.namespace)}`}
+            className="btn-secondary btn-sm"
+            title="ConfigMap y Secret asociados a esta aplicacion"
+          >
+            <FileCog className="w-4 h-4" />
+            ConfigMap &amp; Secret
+          </Link>
         </div>
       </div>
 

@@ -19,6 +19,8 @@ import {
   type Domain,
   type DomainStatus,
 } from '../api/domains';
+import { DeployPanel } from '../components/DeployPanel';
+import { useDeployPolling } from '../hooks/useDeployPolling';
 
 type DeployResult = { kind: string; name: string; action?: string; deleted?: boolean };
 
@@ -60,6 +62,15 @@ export function DomainDetail() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [deployResult, setDeployResult] = useState<DeployResult[] | null>(null);
   const [certLogs, setCertLogs] = useState<Array<{ pod: string; logs: string }> | null>(null);
+  const [deploying, setDeploying] = useState(false);
+
+  const deployDone = (st: DomainStatus) => st.deployed === true;
+
+  const deployPoll = useDeployPolling<DomainStatus>(
+    () => domainsApi.status(domainId),
+    deployDone,
+    { enabled: deploying },
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,14 +108,21 @@ export function DomainDetail() {
   const handleDeploy = () => runAction('deploy', async () => {
     const result = await domainsApi.deploy(domainId);
     setDeployResult(result.resources);
-    await load();
+    setDeploying(true);
   });
+
+  const closeDeployPanel = () => {
+    setDeploying(false);
+    setDeployResult(null);
+    void load();
+  };
 
   const handleUndeploy = () => {
     if (!window.confirm(`Quitar Ingress + Certificate + DNS de "${domain?.host}"?`)) return;
     void runAction('undeploy', async () => {
       await domainsApi.undeploy(domainId);
       setDeployResult(null);
+      setDeploying(false);
       await load();
     });
   };
@@ -202,6 +220,27 @@ export function DomainDetail() {
           </button>
         </div>
       </div>
+
+      {/* Deploy en vivo */}
+      {deploying && (
+        <DeployPanel
+          title="Deploying domain"
+          data={deployPoll.data}
+          loading={deployPoll.loading}
+          error={deployPoll.error}
+          done={deployPoll.done}
+          onClose={closeDeployPanel}
+        >
+          {(st) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Stat label="Deployed" value={st.deployed ? 'Yes' : 'No'} />
+              <Stat label="Ingress" value={st.ingress_exists ? 'Exists' : 'Missing'} />
+              <Stat label="Certificate" value={st.certificate_ready ? 'Ready' : 'Pending'} />
+              <Stat label="Message" value={st.message ?? '-'} />
+            </div>
+          )}
+        </DeployPanel>
+      )}
 
       {/* Especificacion del domain */}
       <div className="card p-4 mb-6">
