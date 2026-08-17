@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Box,
   Calendar,
+  CheckCircle2,
   ExternalLink,
   Globe,
   History,
@@ -13,8 +14,10 @@ import {
   Pencil,
   RefreshCw,
   Save,
+  Tag,
   Trash2,
   X,
+  XCircle,
 } from 'lucide-react';
 import { ApiError, laurelFetch } from '../api/laurel';
 import {
@@ -23,6 +26,7 @@ import {
   type DeletionLog,
   appsApi,
 } from '../api/apps';
+import { buildsApi, type AppBuild, type BuildStatus } from '../api/builds';
 
 interface AppScoop {
   id: number;
@@ -33,6 +37,59 @@ interface AppScoop {
 }
 
 const labelClass = 'block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase mb-1';
+
+const STATUS_STYLES: Record<BuildStatus, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
+  pending: {
+    label: 'Pendiente',
+    cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    icon: Loader2,
+  },
+  running: {
+    label: 'Corriendo',
+    cls: 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300',
+    icon: Loader2,
+  },
+  success: {
+    label: 'Exitoso',
+    cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+    icon: CheckCircle2,
+  },
+  failed: {
+    label: 'Fallido',
+    cls: 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300',
+    icon: XCircle,
+  },
+  aborted: {
+    label: 'Abortado',
+    cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+    icon: XCircle,
+  },
+};
+
+function StatusPill({ status }: { status: BuildStatus }) {
+  const s = STATUS_STYLES[status];
+  const Icon = s.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>
+      <Icon className={`w-3 h-3 ${status === 'running' || status === 'pending' ? 'animate-spin' : ''}`} />
+      {s.label}
+    </span>
+  );
+}
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '-';
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
+}
+
+function shortSha(sha: string | null): string {
+  if (!sha) return '-';
+  return sha.slice(0, 7);
+}
 
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -145,6 +202,13 @@ export function AppDetail() {
   const [deleting, setDeleting] = useState(false);
   const [deletionLogs, setDeletionLogs] = useState<DeletionLog[] | null>(null);
 
+  // --- Versiones & Builds ---
+  const [builds, setBuilds] = useState<AppBuild[]>([]);
+  const [buildsLoading, setBuildsLoading] = useState(false);
+  const [versionDraft, setVersionDraft] = useState<string>('');
+  const [versionSaving, setVersionSaving] = useState(false);
+  const [versionError, setVersionError] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -178,6 +242,65 @@ export function AppDetail() {
       .then((r) => setDeletionLogs(r.logs))
       .catch(() => setDeletionLogs([]));
   }, [app?.deleted_at, appId]);
+
+  // Sincroniza el draft de version con la version actual de la app.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (app?.current_version) setVersionDraft(app.current_version);
+  }, [app?.current_version]);
+
+  // Carga inicial + auto-refresh mientras haya builds vivos (pending/running).
+  // El backend hace polling a Jenkins on-demand, asi que el frontend solo
+  // necesita recargar la lista cada 5s.
+  const loadBuilds = useCallback(async () => {
+    if (!Number.isFinite(appId)) return;
+    setBuildsLoading(true);
+    try {
+      const list = await buildsApi.list(appId, { poll: true });
+      setBuilds(list);
+    } catch {
+      // Si falla el poll, no rompemos la pagina: queda la lista anterior.
+    } finally {
+      setBuildsLoading(false);
+    }
+  }, [appId]);
+
+  useEffect(() => {
+    void loadBuilds();
+  }, [loadBuilds]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    const hasLive = builds.some((b) => b.status === 'pending' || b.status === 'running');
+    if (!hasLive) return;
+    const id = window.setInterval(() => {
+      void loadBuilds();
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [builds, loadBuilds]);
+
+  const handleSetVersion = () => {
+    if (!versionDraft.trim()) {
+      setVersionError('La version no puede estar vacia');
+      return;
+    }
+    setVersionSaving(true);
+    setVersionError(null);
+    buildsApi
+      .setCurrentVersion(appId, versionDraft.trim())
+      .then((res) => {
+        // Reflejamos la nueva version en el estado local de la app.
+        setApp((a) => (a ? { ...a, current_version: res.current_version } : a));
+      })
+      .catch((e: unknown) => {
+        if (e instanceof ApiError && e.fieldErrors?.version) {
+          setVersionError(e.fieldErrors.version);
+        } else {
+          setVersionError(e instanceof Error ? e.message : 'Error desconocido');
+        }
+      })
+      .finally(() => setVersionSaving(false));
+  };
 
   const handleSave = (data: ApplicationUpdate) => {
     setSaving(true);
@@ -345,6 +468,104 @@ export function AppDetail() {
           />
           <Stat label="Namespace" value={<span className="font-mono">{app.namespace}</span>} />
         </div>
+      </div>
+
+      {/* Versiones & Builds */}
+      <div className="card p-4 mb-6">
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+          <Tag className="w-4 h-4" />
+          Versiones & Builds
+        </h2>
+
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+          <div className="flex-1">
+            <label className={labelClass}>Version actual (la que usara el proximo push a master)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                className="input flex-1 font-mono"
+                value={versionDraft}
+                onChange={(e) => {
+                  setVersionDraft(e.target.value);
+                  setVersionError(null);
+                }}
+                placeholder="1.0.0"
+                disabled={versionSaving}
+              />
+              <button
+                onClick={handleSetVersion}
+                disabled={versionSaving || versionDraft === app.current_version}
+                className="btn-primary shrink-0"
+              >
+                {versionSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {versionSaving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+            {versionError && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">{versionError}</p>
+            )}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Cuando hagas push a master del repo, el backend dispara Jenkins
+              con esta version como tag. El build aparece abajo en vivo.
+            </p>
+          </div>
+        </div>
+
+        {buildsLoading && builds.length === 0 ? (
+          <p className="text-sm text-slate-500 inline-flex items-center gap-2 py-3">
+            <Loader2 className="w-4 h-4 animate-spin" /> Cargando builds...
+          </p>
+        ) : builds.length === 0 ? (
+          <p className="text-sm text-slate-500 py-3">
+            No hay builds todavia. Hace push a master del repo de la app para
+            disparar el primero.
+          </p>
+        ) : (
+          <ul className="divide-y divide-slate-200 dark:divide-slate-800 border-t border-slate-200 dark:border-slate-800">
+            {builds.map((b) => (
+              <li key={b.id} className="py-3 flex items-center gap-3">
+                <StatusPill status={b.status} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <code className="font-mono text-sm font-semibold text-slate-800 dark:text-white">
+                      {b.version}
+                    </code>
+                    <code className="text-xs text-slate-400 font-mono">
+                      {shortSha(b.commit_sha)}
+                    </code>
+                    <span className="text-xs text-slate-500">
+                      {fmtDate(b.started_at ?? b.queued_at)}
+                    </span>
+                  </div>
+                  {b.error_message && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-0.5 truncate">
+                      {b.error_message}
+                    </p>
+                  )}
+                </div>
+                {b.jenkins_url && (
+                  <a
+                    href={b.jenkins_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 shrink-0"
+                    title="Abrir en Jenkins"
+                  >
+                    Jenkins
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {builds.some((b) => b.status === 'pending' || b.status === 'running') && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 inline-flex items-center gap-1.5">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Refrescando status cada 5s mientras hay builds en curso...
+          </p>
+        )}
       </div>
 
       {/* Resumen */}

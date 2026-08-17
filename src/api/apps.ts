@@ -11,6 +11,7 @@ export interface Application {
   description: string | null;
   github_repo_url: string | null;
   docker_image_base: string | null;
+  current_version: string;
   scoops_count: number;
   domains_count: number;
   namespace: string;
