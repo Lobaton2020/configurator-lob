@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Box, Plus, Pencil, Trash2, RefreshCw, AlertCircle, Eye, ExternalLink } from 'lucide-react';
 import { ApiError, scoopsApi, type Scoop, type ScoopForm, type ScoopUiType } from '../api/scoops';
 import { RegistryInput } from '../components/RegistryInput';
@@ -29,6 +29,7 @@ const statusClass: Record<Scoop['status'], string> = {
 };
 
 export function Scoops() {
+  const navigate = useNavigate();
   const [scoops, setScoops] = useState<Scoop[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -152,13 +153,14 @@ export function Scoops() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-          <Link
-            to="/scoops/new"
+          <button
+            type="button"
+            onClick={() => navigate('/scoops/new')}
             className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             New Scoop
-          </Link>
+          </button>
         </div>
       </div>
 

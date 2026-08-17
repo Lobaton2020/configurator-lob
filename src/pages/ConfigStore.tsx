@@ -443,7 +443,7 @@ export function ConfigStore() {
   // Carga las opciones de los dropdowns de filtros.
   useEffect(() => {
     appsApi
-      .list(1, 1000)
+      .list({ page: 1, limit: 1000 })
       .then((d) => setApps(d.items))
       .catch(() => undefined);
     clusterApi

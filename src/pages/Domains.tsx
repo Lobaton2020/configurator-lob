@@ -421,7 +421,7 @@ export function Domains() {
     setLoading(true);
     Promise.all([
       domainsApi.list({ limit: 100 }),
-      appsApi.list(1, 100),
+      appsApi.list({ page: 1, limit: 100 }),
       scoopsApi.list(),
     ])
       .then(([d, a, s]) => {

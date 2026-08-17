@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { api, type Schema } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useWorkspace } from '../auth/WorkspaceContext';
+import { useApp } from '../auth/AppContext';
 import { CreateWorkspaceModal } from './CreateWorkspaceModal';
 import { Settings, FileText, ChevronDown, ChevronRight, Moon, Sun, Box, Server, LogOut, Menu, X, Leaf, LayoutDashboard, Clock, FileCog, KeyRound, AppWindow, Globe, FolderKanban, Check, Plus } from 'lucide-react';
 
@@ -15,6 +16,51 @@ function initialsOf(name?: string | null, email?: string | null): string {
   const parts = src.trim().split(/[\s._-]+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return src.slice(0, 2).toUpperCase();
+}
+
+const REQUIRES_APP_TOOLTIP = 'Selecciona una app';
+
+/** Item de sidebar: si `requiresApp` y no hay app activa, queda deshabilitado
+ *  con tooltip explicativo, en vez de Link. */
+function SidebarItem({
+  to,
+  exact,
+  className,
+  requiresApp,
+  hasApp,
+  children,
+}: {
+  to: string;
+  exact: boolean;
+  className: string;
+  requiresApp: boolean;
+  hasApp: boolean;
+  children: ReactNode;
+}) {
+  const location = useLocation();
+  const active = exact ? location.pathname === to : location.pathname.startsWith(to);
+  const disabled = requiresApp && !hasApp;
+  if (disabled) {
+    return (
+      <span
+        title={REQUIRES_APP_TOOLTIP}
+        aria-disabled="true"
+        className="flex items-center gap-3 px-3.5 py-2.5 rounded-full text-sm font-medium opacity-50 cursor-not-allowed text-slate-600 dark:text-neutral-400"
+      >
+        {children}
+      </span>
+    );
+  }
+  // Cuando esta activo, no necesitamos clases de hover; en estado normal, si.
+  const withActive = active
+    ? className
+    : className;
+  void withActive;
+  return (
+    <Link to={to} className={className}>
+      {children}
+    </Link>
+  );
 }
 
 export function Layout({ children }: LayoutProps) {
@@ -33,7 +79,9 @@ export function Layout({ children }: LayoutProps) {
   const { user, signOut } = useAuth();
   const { workspace, workspaces, selectWorkspace, createWorkspace, signOutWorkspace } =
     useWorkspace();
+  const { app, ready: appReady } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
+  const hasApp = !!app;
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -146,34 +194,30 @@ export function Layout({ children }: LayoutProps) {
 
             {scoopsOpen && (
               <div className="ml-5 mt-1 space-y-1 border-l border-slate-200 dark:border-neutral-800 pl-3">
-                <Link to="/apps" className={navItem('/apps', false)}>
+                <SidebarItem to="/apps" exact={false} className={navItem('/apps', false)} requiresApp={false} hasApp={hasApp}>
                   <AppWindow className="w-5 h-5" />
                   Apps
-                </Link>
-                <Link to="/domains" className={navItem('/domains', false)}>
+                </SidebarItem>
+                <SidebarItem to="/domains" exact={false} className={navItem('/domains', false)} requiresApp hasApp={hasApp}>
                   <Globe className="w-5 h-5" />
                   Domains
-                </Link>
-                <Link to="/scoops" className={navItem('/scoops', false)}>
+                </SidebarItem>
+                <SidebarItem to="/scoops" exact={false} className={navItem('/scoops', false)} requiresApp hasApp={hasApp}>
                   <Box className="w-5 h-5" />
                   Scoops
-                </Link>
-                <Link to="/scoops/new" className={navItem('/scoops/new', true)}>
-                  <Box className="w-5 h-5" />
-                  New Scoop
-                </Link>
-                <Link to="/configstore" className={navItem('/configstore', true)}>
+                </SidebarItem>
+                <SidebarItem to="/configstore" exact className={navItem('/configstore', true)} requiresApp hasApp={hasApp}>
                   <FileCog className="w-5 h-5" />
                   Configs
-                </Link>
-                <Link to="/secrets" className={navItem('/secrets', false)}>
+                </SidebarItem>
+                <SidebarItem to="/secrets" exact={false} className={navItem('/secrets', false)} requiresApp hasApp={hasApp}>
                   <KeyRound className="w-5 h-5" />
                   Secrets
-                </Link>
-                <Link to="/audits" className={navItem('/audits', true)}>
+                </SidebarItem>
+                <SidebarItem to="/audits" exact className={navItem('/audits', true)} requiresApp={false} hasApp={hasApp}>
                   <Clock className="w-5 h-5" />
                   Audits
-                </Link>
+                </SidebarItem>
               </div>
             )}
           </div>
@@ -194,7 +238,19 @@ export function Layout({ children }: LayoutProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="relative ml-auto" ref={userMenuRef}>
+          <div className="ml-auto flex items-center gap-2">
+            {appReady && app && (
+              <span
+                title="App activa"
+                className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200 bg-slate-100/80 dark:bg-neutral-900 rounded-full px-2.5 py-1"
+              >
+                <AppWindow className="w-3.5 h-3.5 text-[#1a73e8]" />
+                <span className="font-semibold truncate max-w-[12rem]">{app.name}</span>
+                <code className="text-slate-400">{app.slug}</code>
+              </span>
+            )}
+          </div>
+          <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full px-3 py-1.5 transition-colors"

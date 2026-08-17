@@ -133,8 +133,10 @@ export function Apps() {
 
   const reload = () => {
     setLoading(true);
-    appsApi
-      .list(1, 100)
+    const req = workspace
+      ? appsApi.list({ page: 1, limit: 100, workspace_id: workspace.id })
+      : appsApi.list({ page: 1, limit: 100 });
+    req
       .then((data) => setApps(data.items))
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Error al cargar'))
       .finally(() => setLoading(false));
