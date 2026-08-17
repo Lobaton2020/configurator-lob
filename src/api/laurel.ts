@@ -67,9 +67,11 @@ export async function laurelFetch<T = unknown>(path: string, options: LaurelFetc
     merged['Content-Type'] = 'application/json';
   }
 
+  const normalized = path.startsWith('/api') ? path : `/api${path}`;
+
   let res: Response;
   try {
-    res = await fetch(`${LAUREL_BASE}${path}`, {
+    res = await fetch(`${LAUREL_BASE}${normalized}`, {
       ...rest,
       headers: merged,
       body: typeof body === 'string' ? body : body ? JSON.stringify(body) : undefined,
