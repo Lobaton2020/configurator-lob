@@ -63,7 +63,7 @@ export function Layout({ children }: LayoutProps) {
   const navItem = (to: string, exact: boolean) =>
     `flex items-center gap-3 px-3.5 py-2.5 rounded-full text-sm font-medium transition-colors ${
       (exact ? location.pathname === to : location.pathname.startsWith(to))
-        ? 'bg-[#e8f0fe] text-[#1a73e8] dark:bg-neutral-900 text-neutral-50'
+        ? 'bg-[#e8f0fe] text-[#1a73e8] dark:bg-neutral-900 dark:text-neutral-50'
         : 'text-slate-600 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-neutral-900'
     }`;
 
