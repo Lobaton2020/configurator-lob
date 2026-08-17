@@ -24,6 +24,7 @@ export interface ApplicationCreate {
   github_repo_url?: string;
   docker_image_base?: string;
   create_github_repo?: boolean;
+  workspace_id?: number;
 }
 
 export interface ApplicationUpdate {

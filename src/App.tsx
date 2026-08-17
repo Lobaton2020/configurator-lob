@@ -18,158 +18,46 @@ import { DomainDetail } from './pages/DomainDetail';
 import { Login } from './pages/Login';
 import { AuthProvider } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
+import { WorkspaceProvider } from './auth/WorkspaceContext';
+import { RequireWorkspace } from './auth/WorkspaceRequire';
 
 const GOOGLE_CLIENT_ID_FALLBACK =
   (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_GOOGLE_CLIENT_ID ?? '';
+
+function Protected() {
+  return (
+    <RequireAuth>
+      <RequireWorkspace />
+    </RequireAuth>
+  );
+}
 
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID_FALLBACK}>
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/audits"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <Audits />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/schemas"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <Schemas />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/schema/:id"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <SchemaDetail />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/scoops"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <Scoops />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/scoops/new"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <ScoopNew />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/cluster"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <Cluster />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/scoops/:id"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <ScoopDetail />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/configstore"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <ConfigStore />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/secrets"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <Secrets />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/apps"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <Apps />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/apps/:id"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <AppDetail />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/domains"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <Domains />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/domains/:id"
-              element={
-                <RequireAuth>
-                  <Layout>
-                    <DomainDetail />
-                  </Layout>
-                </RequireAuth>
-              }
-            />
-          </Routes>
+          <WorkspaceProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route element={<Protected />}>
+                <Route path="/" element={<Layout><Dashboard /></Layout>} />
+                <Route path="/audits" element={<Layout><Audits /></Layout>} />
+                <Route path="/schemas" element={<Layout><Schemas /></Layout>} />
+                <Route path="/schema/:id" element={<Layout><SchemaDetail /></Layout>} />
+                <Route path="/scoops" element={<Layout><Scoops /></Layout>} />
+                <Route path="/scoops/new" element={<Layout><ScoopNew /></Layout>} />
+                <Route path="/cluster" element={<Layout><Cluster /></Layout>} />
+                <Route path="/scoops/:id" element={<Layout><ScoopDetail /></Layout>} />
+                <Route path="/configstore" element={<Layout><ConfigStore /></Layout>} />
+                <Route path="/secrets" element={<Layout><Secrets /></Layout>} />
+                <Route path="/apps" element={<Layout><Apps /></Layout>} />
+                <Route path="/apps/:id" element={<Layout><AppDetail /></Layout>} />
+                <Route path="/domains" element={<Layout><Domains /></Layout>} />
+                <Route path="/domains/:id" element={<Layout><DomainDetail /></Layout>} />
+              </Route>
+            </Routes>
+          </WorkspaceProvider>
         </AuthProvider>
       </BrowserRouter>
     </GoogleOAuthProvider>

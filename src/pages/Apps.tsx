@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, AppWindow, ExternalLink, Loader2, Plus, X } from 'lucide-react';
 import { ApiError } from '../api/laurel';
 import { type Application, type ApplicationCreate, appsApi } from '../api/apps';
+import { useWorkspace } from '../auth/WorkspaceContext';
 
 const emptyForm: ApplicationCreate = {
   name: '',
@@ -122,6 +123,7 @@ function AppForm({
 
 export function Apps() {
   const navigate = useNavigate();
+  const { workspace } = useWorkspace();
   const [apps, setApps] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,7 +146,7 @@ export function Apps() {
     setSubmitting(true);
     setSubmitError(null);
     appsApi
-      .create(data)
+      .create({ ...data, ...(workspace ? { workspace_id: workspace.id } : {}) })
       .then(() => {
         setShowForm(false);
         reload();

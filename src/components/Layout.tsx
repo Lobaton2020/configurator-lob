@@ -2,7 +2,9 @@ import { useState, useEffect, type ReactNode, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api, type Schema } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import { Settings, FileText, ChevronDown, ChevronRight, Moon, Sun, Box, Server, LogOut, Menu, X, Leaf, LayoutDashboard, Clock, FileCog, KeyRound, AppWindow, Globe } from 'lucide-react';
+import { useWorkspace } from '../auth/WorkspaceContext';
+import { CreateWorkspaceModal } from './CreateWorkspaceModal';
+import { Settings, FileText, ChevronDown, ChevronRight, Moon, Sun, Box, Server, LogOut, Menu, X, Leaf, LayoutDashboard, Clock, FileCog, KeyRound, AppWindow, Globe, FolderKanban, Check, Plus } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -29,6 +31,9 @@ export function Layout({ children }: LayoutProps) {
   });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { workspace, workspaces, selectWorkspace, createWorkspace, signOutWorkspace } =
+    useWorkspace();
+  const [createOpen, setCreateOpen] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -192,21 +197,70 @@ export function Layout({ children }: LayoutProps) {
           <div className="relative ml-auto" ref={userMenuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full px-2 py-1.5 transition-colors"
+              className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full px-3 py-1.5 transition-colors"
+              title="Workspace activo"
             >
-              <span className="hidden sm:block truncate max-w-[14rem] font-medium" title={user?.email || ''}>
-                {user?.name || user?.email || 'Sesion'}
+              <FolderKanban className="w-4 h-4 text-[#1a73e8]" />
+              <span className="hidden sm:block font-semibold truncate max-w-[14rem]">
+                {workspace?.name ?? 'Sin workspace'}
               </span>
-              <span className="w-9 h-9 rounded-full brand-gradient text-white text-xs font-semibold flex items-center justify-center shadow-sm select-none">
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <span className="w-8 h-8 rounded-full brand-gradient text-white text-xs font-semibold flex items-center justify-center shadow-sm select-none">
                 {initialsOf(user?.name, user?.email)}
               </span>
             </button>
             {userMenuOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg py-2 z-50">
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg py-2 z-50">
+                <div className="px-4 py-2">
+                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                    Workspace activo
+                  </div>
+                  <div className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                    {workspace?.name ?? 'Ninguno'}
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 dark:border-slate-800 my-1" />
+                <div className="max-h-64 overflow-y-auto px-1">
+                  {workspaces.map((w) => (
+                    <button
+                      key={w.id}
+                      onClick={() => {
+                        selectWorkspace(w);
+                        setUserMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                        workspace?.id === w.id
+                          ? 'text-[#1a73e8] font-medium'
+                          : 'text-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate">{w.name}</span>
+                        <code className="text-xs text-slate-400">{w.slug}</code>
+                      </span>
+                      {workspace?.id === w.id && <Check className="w-4 h-4 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="px-1">
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      setCreateOpen(true);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 text-[#1a73e8] rounded-xl"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nuevo workspace
+                  </button>
+                </div>
+
+                <div className="border-t border-slate-100 dark:border-slate-800 my-1" />
                 <div className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400 truncate">
                   {user?.email || ''}
                 </div>
-                <div className="border-t border-slate-100 dark:border-slate-800 my-1" />
                 <button
                   onClick={() => { setDarkMode(!darkMode); setUserMenuOpen(false); }}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 text-slate-700 dark:text-slate-200"
@@ -215,7 +269,7 @@ export function Layout({ children }: LayoutProps) {
                   {darkMode ? 'Light Mode' : 'Dark Mode'}
                 </button>
                 <button
-                  onClick={() => { setUserMenuOpen(false); signOut(); }}
+                  onClick={() => { setUserMenuOpen(false); signOutWorkspace(); signOut(); }}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 text-red-600 dark:text-red-400"
                 >
                   <LogOut className="w-4 h-4" />
@@ -225,6 +279,10 @@ export function Layout({ children }: LayoutProps) {
             )}
           </div>
         </header>
+
+        {createOpen && (
+          <CreateWorkspaceModal onClose={() => setCreateOpen(false)} onCreate={createWorkspace} />
+        )}
 
         <main className="flex-1 overflow-auto flex flex-col">
           <div className="flex-1">{children}</div>
