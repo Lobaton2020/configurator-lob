@@ -12,6 +12,7 @@ import { Cluster } from './pages/Cluster';
 import { ConfigStore } from './pages/ConfigStore';
 import { Secrets } from './pages/Secrets';
 import { Apps } from './pages/Apps';
+import { AppDetail } from './pages/AppDetail';
 import { Domains } from './pages/Domains';
 import { DomainDetail } from './pages/DomainDetail';
 import { Login } from './pages/Login';
@@ -134,6 +135,16 @@ function App() {
                 <RequireAuth>
                   <Layout>
                     <Apps />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/apps/:id"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <AppDetail />
                   </Layout>
                 </RequireAuth>
               }

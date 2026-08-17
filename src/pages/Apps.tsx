@@ -240,7 +240,11 @@ export function Apps() {
               </tr>
             )}
             {apps.map((a) => (
-              <tr key={a.id} className="border-t border-slate-100 dark:border-neutral-900 hover:bg-slate-50 dark:hover:bg-neutral-950">
+              <tr
+                key={a.id}
+                className="border-t border-slate-100 dark:border-neutral-900 hover:bg-slate-50 dark:hover:bg-neutral-950 cursor-pointer"
+                onClick={() => navigate(`/apps/${a.id}`)}
+              >
                 <td className="px-4 py-2 font-medium">{a.name}</td>
                 <td className="px-4 py-2">
                   <code className="text-xs">{a.slug}</code>
@@ -253,6 +257,7 @@ export function Apps() {
                       href={a.github_repo_url}
                       target="_blank"
                       rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       className="inline-flex items-center gap-1 text-blue-600 hover:underline"
                     >
                       <ExternalLink className="w-3 h-3" />
@@ -271,13 +276,10 @@ export function Apps() {
                 </td>
                 <td className="px-4 py-2 text-right">
                   <button
-                    onClick={() => navigate(`/apps/${a.id}`)}
-                    className="text-xs text-blue-600 hover:underline mr-3"
-                  >
-                    Detalle
-                  </button>
-                  <button
-                    onClick={() => handleDelete(a.id, a.slug)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(a.id, a.slug);
+                    }}
                     className="text-xs text-red-600 hover:underline"
                   >
                     Eliminar
