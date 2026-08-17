@@ -49,14 +49,14 @@ export function Secrets() {
   const [banner, setBanner] = useState<{ kind: 'error' | 'warn' | 'success'; msg: string } | null>(null);
 
   const refresh = useCallback(async () => {
-    setList({ loading: true, error: null, data: list.data });
+    setList((prev) => ({ ...prev, loading: true, error: null }));
     try {
       const data = await systemSecretsApi.list();
       setList({ loading: false, error: null, data: data.items });
     } catch (e) {
-      setList({ loading: false, error: errMsg(e), data: list.data });
+      setList((prev) => ({ ...prev, loading: false, error: errMsg(e) }));
     }
-  }, [list.data]);
+  }, []);
 
   const openSecret = useCallback(async (id: string) => {
     setActiveId(id);
