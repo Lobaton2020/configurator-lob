@@ -14,6 +14,20 @@ body {
   @apply bg-[#f8f9fa] text-[#202124] dark:bg-slate-950 dark:text-slate-100 antialiased;
 }
 
+@keyframes drift-forward {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes drift-reverse {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landscape-anim { animation: none !important; }
+}
+
 @layer components {
   .brand-gradient {
     @apply bg-gradient-to-br from-[#1a73e8] via-[#4a5ae8] to-[#8b5cf6];

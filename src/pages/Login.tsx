@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { Leaf } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
+import { LandscapeBg } from '../components/LandscapeBg';
 
 export function Login() {
   const { googleClientId, signInWithGoogle, loginRequired } = useAuth();
@@ -14,21 +15,22 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa] dark:bg-slate-950 px-4">
-      <div className="w-full max-w-sm">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-950 px-4">
+      <LandscapeBg />
+      <div className="relative z-10 w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl brand-gradient text-white flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-4">
+          <div className="w-16 h-16 rounded-2xl brand-gradient text-white flex items-center justify-center shadow-lg shadow-indigo-500/40 ring-1 ring-white/20 mb-4">
             <Leaf className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-800 dark:text-white">
             Laurel
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Inicia sesion para continuar
           </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-8">
+        <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-white/60 dark:border-slate-800 shadow-xl shadow-indigo-500/10 p-8">
           {googleClientId ? (
             <div className="flex justify-center">
               <GoogleLogin
