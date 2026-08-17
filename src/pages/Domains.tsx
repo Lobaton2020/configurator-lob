@@ -1,32 +1,56 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, Globe, Loader2, Plus, Power, Trash2, X } from 'lucide-react';
+import {
+  AlertCircle,
+  Globe,
+  Loader2,
+  Plus,
+  Power,
+  Settings2,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { ApiError } from '../api/laurel';
 import { type Domain, type DomainCreate, domainsApi } from '../api/domains';
+import { type DomainPoolItem, domainPoolApi } from '../api/domainPool';
 import { appsApi, type Application } from '../api/apps';
 import { scoopsApi, type Scoop } from '../api/scoops';
+
+const DNS_LABEL = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+
+function isValidFqdn(d: string): boolean {
+  const labels = d.split('.');
+  return labels.length >= 2 && labels.every((l) => l.length <= 63 && DNS_LABEL.test(l));
+}
 
 function NewDomainForm({
   apps,
   scoops,
+  poolItems,
+  poolLoading,
   onSubmit,
   onCancel,
+  onOpenManage,
   submitting,
   error,
 }: {
   apps: Application[];
   scoops: Scoop[];
+  poolItems: DomainPoolItem[];
+  poolLoading: boolean;
   onSubmit: (data: DomainCreate) => void;
   onCancel: () => void;
+  onOpenManage: () => void;
   submitting: boolean;
   error: string | null;
 }) {
-  const [form, setForm] = useState<DomainCreate>({
-    application_id: 0,
-    scoop_id: 0,
-    host: '',
-    tls: true,
-  });
+  const [form, setForm] = useState<{
+    application_id: number;
+    scoop_id: number;
+    domain_pool_id: number;
+    prefix: string;
+    tls: boolean;
+  }>({ application_id: 0, scoop_id: 0, domain_pool_id: 0, prefix: '', tls: true });
 
   const apiScoops = scoops.filter(
     (s) => s.application === apps.find((a) => a.id === form.application_id)?.slug
@@ -34,11 +58,16 @@ function NewDomainForm({
       && s.port !== null,
   );
 
+  const chosen = poolItems.find((p) => p.id === form.domain_pool_id);
+  const host = chosen && form.prefix ? `${form.prefix}.${chosen.domain}` : '';
+
   return (
     <form
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
-        if (form.application_id && form.scoop_id && form.host) onSubmit(form);
+        if (form.application_id && form.scoop_id && chosen && form.prefix && host) {
+          onSubmit({ ...form, host });
+        }
       }}
       className="space-y-4"
     >
@@ -51,7 +80,7 @@ function NewDomainForm({
             ...form,
             application_id: Number(e.target.value),
             scoop_id: 0,
-            host: '',
+            prefix: '',
           })}
           required
         >
@@ -69,12 +98,11 @@ function NewDomainForm({
           value={form.scoop_id}
           onChange={(e) => {
             const scoopId = Number(e.target.value);
-            const slug = apps.find((a) => a.id === form.application_id)?.slug || '';
             const scoop = apiScoops.find((s) => s.id === scoopId);
             setForm({
               ...form,
               scoop_id: scoopId,
-              host: scoop ? `${scoop.name}.${guessTld(slug)}` : form.host,
+              prefix: scoop && !form.prefix ? scoop.name : form.prefix,
             });
           }}
           required
@@ -95,14 +123,59 @@ function NewDomainForm({
       </div>
 
       <div>
-        <label className="label">Host (subdominio publico)</label>
+        <label className="label">Dominio del pool</label>
+        <div className="flex gap-2">
+          <select
+            className="input"
+            value={form.domain_pool_id}
+            onChange={(e) => setForm({ ...form, domain_pool_id: Number(e.target.value) })}
+            disabled={poolLoading}
+            required
+          >
+            <option value={0}>
+              {poolLoading ? 'Cargando dominios...' : '-- selecciona --'}
+            </option>
+            {poolItems.map((p) => (
+              <option key={p.id} value={p.id}>{p.domain}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={onOpenManage}
+            className="btn-secondary whitespace-nowrap"
+          >
+            <Settings2 className="w-4 h-4" />
+            Gestionar dominios
+          </button>
+        </div>
+        {!poolLoading && poolItems.length === 0 && (
+          <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            No hay dominios registrados — añade uno.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label className="label">Prefijo (subdominio)</label>
         <input
           required
-          className="input"
-          value={form.host}
-          onChange={(e) => setForm({ ...form, host: e.target.value })}
-          placeholder="notas.resto.com"
+          className="input font-mono"
+          value={form.prefix}
+          onChange={(e) => setForm({ ...form, prefix: e.target.value.toLowerCase() })}
+          placeholder="notas"
+          maxLength={63}
         />
+        <p className="text-xs text-slate-500 mt-1">
+          Solo letras minusculas, numeros y guiones (DNS-1123).
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 px-3 py-2">
+        <span className="text-xs text-slate-500">Host resultante</span>
+        <span className="text-sm font-mono text-slate-800 dark:text-white">
+          {host || '—'}
+        </span>
       </div>
 
       <label className="flex items-center gap-2 text-sm">
@@ -126,7 +199,7 @@ function NewDomainForm({
         <button type="button" onClick={onCancel} className="btn-secondary">
           Cancelar
         </button>
-        <button type="submit" disabled={submitting} className="btn-primary">
+        <button type="submit" disabled={submitting || !host} className="btn-primary">
           {submitting ? 'Guardando...' : 'Crear'}
         </button>
       </div>
@@ -134,8 +207,189 @@ function NewDomainForm({
   );
 }
 
-function guessTld(_slug: string): string {
-  return 'andreslobaton.top';
+function DomainPoolModal({
+  items,
+  loading,
+  onClose,
+  onChanged,
+}: {
+  items: DomainPoolItem[];
+  loading: boolean;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [form, setForm] = useState({ domain: '', description: '' });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editDesc, setEditDesc] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+    } catch (e: unknown) {
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAdd = (e: FormEvent) => {
+    e.preventDefault();
+    const domain = form.domain.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+    if (!isValidFqdn(domain)) {
+      setError('El dominio debe ser un FQDN valido en minusculas (ej. andreslobaton.top), sin http://');
+      return;
+    }
+    void run(async () => {
+      await domainPoolApi.create({ domain, description: form.description.trim() });
+      setForm({ domain: '', description: '' });
+      onChanged();
+    });
+  };
+
+  const handleUpdate = (item: DomainPoolItem) => {
+    const desc = editDesc.trim();
+    if (desc === item.description) {
+      setEditingId(null);
+      return;
+    }
+    void run(async () => {
+      await domainPoolApi.update(item.id, { description: desc });
+      setEditingId(null);
+      onChanged();
+    });
+  };
+
+  const handleDelete = (item: DomainPoolItem) => {
+    if (!confirm(`Eliminar dominio '${item.domain}' del pool?`)) return;
+    void run(async () => {
+      await domainPoolApi.delete(item.id);
+      onChanged();
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <Globe className="w-5 h-5 text-[#1a73e8]" />
+            <h2 className="text-lg font-medium">Dominios del pool</h2>
+          </div>
+          <button onClick={onClose} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4 overflow-y-auto">
+          <form onSubmit={handleAdd} className="space-y-3 border border-slate-200 dark:border-slate-800 rounded-2xl p-4">
+            <div>
+              <label className="label">Dominio (FQDN poseido)</label>
+              <input
+                className="input font-mono"
+                value={form.domain}
+                onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                placeholder="andreslobaton.top"
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Descripcion</label>
+              <input
+                className="input"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Dominio principal"
+              />
+            </div>
+            {error && (
+              <div className="text-sm text-red-600 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {error}
+              </div>
+            )}
+            <div className="flex justify-end">
+              <button type="submit" disabled={busy} className="btn-primary btn-sm">
+                {busy ? 'Guardando...' : 'Añadir dominio'}
+              </button>
+            </div>
+          </form>
+
+          {loading ? (
+            <p className="text-sm text-slate-500 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Cargando...
+            </p>
+          ) : items.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              No hay dominios registrados. Añade uno cuando compres un dominio nuevo.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {items.map((p) => (
+                <li key={p.id} className="border border-slate-200 dark:border-slate-800 rounded-2xl p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-mono text-sm text-slate-800 dark:text-white">{p.domain}</div>
+                      {editingId === p.id ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            className="input py-1 text-sm"
+                            value={editDesc}
+                            onChange={(e) => setEditDesc(e.target.value)}
+                            placeholder="Descripcion"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleUpdate(p)}
+                            disabled={busy}
+                            className="btn-primary btn-sm"
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(null)}
+                            className="btn-secondary btn-sm"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-500 truncate">{p.description || '—'}</div>
+                      )}
+                    </div>
+                    {editingId !== p.id && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => { setEditingId(p.id); setEditDesc(p.description); }}
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(p)}
+                          disabled={busy}
+                          className="text-red-600 hover:opacity-70 disabled:opacity-50 p-1"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function Domains() {
@@ -149,6 +403,19 @@ export function Domains() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+
+  const [poolItems, setPoolItems] = useState<DomainPoolItem[]>([]);
+  const [poolLoading, setPoolLoading] = useState(true);
+  const [showPoolModal, setShowPoolModal] = useState(false);
+
+  const loadPool = () => {
+    setPoolLoading(true);
+    domainPoolApi
+      .list()
+      .then((r) => setPoolItems(r.items))
+      .catch(() => setPoolItems([]))
+      .finally(() => setPoolLoading(false));
+  };
 
   const reload = () => {
     setLoading(true);
@@ -166,7 +433,10 @@ export function Domains() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(reload, []);
+  useEffect(() => {
+    reload();
+    loadPool();
+  }, []);
 
   const handleCreate = (data: DomainCreate) => {
     setSubmitting(true);
@@ -271,12 +541,24 @@ export function Domains() {
           <NewDomainForm
             apps={apps}
             scoops={scoops}
+            poolItems={poolItems}
+            poolLoading={poolLoading}
             onSubmit={handleCreate}
             onCancel={() => setShowForm(false)}
+            onOpenManage={() => setShowPoolModal(true)}
             submitting={submitting}
             error={submitError}
           />
         </div>
+      )}
+
+      {showPoolModal && (
+        <DomainPoolModal
+          items={poolItems}
+          loading={poolLoading}
+          onClose={() => setShowPoolModal(false)}
+          onChanged={loadPool}
+        />
       )}
 
       <div className="card overflow-hidden">
