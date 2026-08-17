@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, AppWindow, ExternalLink, Loader2, Plus, X } from 'lucide-react';
+import { AlertCircle, AppWindow, ExternalLink, Loader2, Plus, Trash2, X } from 'lucide-react';
 import { ApiError } from '../api/laurel';
 import { type Application, type ApplicationCreate, appsApi } from '../api/apps';
 import { useWorkspace } from '../auth/WorkspaceContext';
@@ -130,6 +130,10 @@ export function Apps() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Application | null>(null);
+  const [deletePhrase, setDeletePhrase] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const reload = () => {
     setLoading(true);
@@ -160,12 +164,26 @@ export function Apps() {
       .finally(() => setSubmitting(false));
   };
 
-  const handleDelete = (id: number, slug: string) => {
-    if (!confirm(`Soft-delete de '${slug}'. Continuar?`)) return;
+  const openDelete = (a: Application) => {
+    setDeleteTarget(a);
+    setDeletePhrase('');
+    setDeleteError(null);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
     appsApi
-      .delete(id)
-      .then(reload)
-      .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Error al eliminar'));
+      .delete(deleteTarget.id)
+      .then(() => {
+        setDeleteTarget(null);
+        reload();
+      })
+      .catch((e: unknown) =>
+        setDeleteError(e instanceof Error ? e.message : 'Error al eliminar'),
+      )
+      .finally(() => setDeleting(false));
   };
 
   if (loading) {
@@ -282,10 +300,11 @@ export function Apps() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(a.id, a.slug);
+                      openDelete(a);
                     }}
-                    className="text-xs text-red-600 hover:underline"
+                    className="text-xs text-red-600 hover:underline inline-flex items-center gap-1"
                   >
+                    <Trash2 className="w-3 h-3" />
                     Eliminar
                   </button>
                 </td>
@@ -294,6 +313,87 @@ export function Apps() {
           </tbody>
         </table>
       </div>
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => !deleting && setDeleteTarget(null)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
+                  Eliminar app
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Soft-delete. No toca el cluster. Se conserva el historial.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">
+              Esta accion es reversible solo restaurando manualmente. Para
+              confirmar, escribe el slug{' '}
+              <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-red-600 dark:text-red-300 font-mono">
+                {deleteTarget.slug}
+              </code>
+              :
+            </p>
+
+            <input
+              type="text"
+              value={deletePhrase}
+              onChange={(e) => setDeletePhrase(e.target.value)}
+              placeholder={deleteTarget.slug}
+              className="input w-full font-mono"
+              autoFocus
+              disabled={deleting}
+            />
+
+            {deleteError && (
+              <div className="mt-3 text-sm text-red-600 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting || deletePhrase !== deleteTarget.slug}
+                className="btn-danger"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Eliminar app
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

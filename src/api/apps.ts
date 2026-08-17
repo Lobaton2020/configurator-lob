@@ -17,6 +17,8 @@ export interface Application {
   workspace_id: number | null;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
 export interface ApplicationCreate {
@@ -46,6 +48,20 @@ export interface ApplicationListOpts {
   page?: number;
   limit?: number;
   workspace_id?: number;
+}
+
+export interface DeletionLog {
+  id: number;
+  deleted_at: string;
+  deleted_by: string;
+  snapshot: Record<string, unknown> | null;
+}
+
+export interface DeletionLogsResponse {
+  app_id: number;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  logs: DeletionLog[];
 }
 
 function buildListQs(opts: ApplicationListOpts): string {
@@ -80,4 +96,7 @@ export const appsApi = {
     laurelFetch<{ deleted: number; slug: string }>(`/api/apps/${id}`, {
       method: 'DELETE',
     }),
+
+  deletionLogs: (id: number) =>
+    laurelFetch<DeletionLogsResponse>(`/api/apps/${id}/deletion-logs`),
 };

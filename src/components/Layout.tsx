@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api, type Schema } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useWorkspace } from '../auth/WorkspaceContext';
@@ -65,6 +65,7 @@ function SidebarItem({
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [_schemas, _setSchemas] = useState<Schema[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [configuratorOpen, setConfiguratorOpen] = useState(true);
@@ -76,14 +77,16 @@ export function Layout({ children }: LayoutProps) {
     return false;
   });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [appMenuOpen, setAppMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { workspace, workspaces, selectWorkspace, createWorkspace, signOutWorkspace } =
     useWorkspace();
-  const { app, ready: appReady } = useApp();
+  const { app, apps, ready: appReady, selectApp } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const hasApp = !!app;
 
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const appMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api.getSchemas().then(_setSchemas).catch(console.error);
@@ -107,6 +110,17 @@ export function Layout({ children }: LayoutProps) {
       localStorage.setItem('darkMode', 'false');
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    if (!appMenuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (appMenuRef.current && !appMenuRef.current.contains(e.target as Node)) {
+        setAppMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [appMenuOpen]);
 
   const navItem = (to: string, exact: boolean) =>
     `flex items-center gap-3 px-3.5 py-2.5 rounded-full text-sm font-medium transition-colors ${
@@ -239,28 +253,92 @@ export function Layout({ children }: LayoutProps) {
             <Menu className="w-5 h-5" />
           </button>
           <div className="ml-auto flex items-center gap-2">
-            {appReady && app && (
-              <span
-                title="App activa"
-                className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200 bg-slate-100/80 dark:bg-neutral-900 rounded-full px-2.5 py-1"
-              >
-                <AppWindow className="w-3.5 h-3.5 text-[#1a73e8]" />
-                <span className="font-semibold truncate max-w-[12rem]">{app.name}</span>
-                <code className="text-slate-400">{app.slug}</code>
-              </span>
+            {appReady && workspace && (
+              <div className="relative" ref={appMenuRef}>
+                <button
+                  onClick={() => setAppMenuOpen(!appMenuOpen)}
+                  title="Cambiar app"
+                  className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50 dark:hover:bg-emerald-950/60 transition-colors"
+                >
+                  <AppWindow className="w-3.5 h-3.5" />
+                  {app ? (
+                    <>
+                      <span className="truncate max-w-[12rem]">{app.name}</span>
+                      <code className="opacity-70">{app.slug}</code>
+                    </>
+                  ) : (
+                    <span>Seleccionar app</span>
+                  )}
+                  <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                </button>
+                {appMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg py-2 z-50">
+                    <div className="px-4 py-2">
+                      <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">
+                        App activa
+                      </div>
+                      <div className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                        {app?.name ?? 'Ninguna'}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 dark:border-slate-800 my-1" />
+                    <div className="max-h-64 overflow-y-auto px-1">
+                      {apps.length === 0 && (
+                        <div className="px-3 py-3 text-xs text-slate-500">
+                          No hay apps en este workspace.
+                        </div>
+                      )}
+                      {apps.map((a) => (
+                        <button
+                          key={a.id}
+                          onClick={() => {
+                            selectApp(a);
+                            setAppMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 ${
+                            app?.id === a.id
+                              ? 'bg-emerald-50/60 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium'
+                              : 'text-slate-700 dark:text-slate-200'
+                          }`}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate">{a.name}</span>
+                            <code className="text-xs text-slate-400">{a.slug}</code>
+                          </span>
+                          {app?.id === a.id && <Check className="w-4 h-4 shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="px-1">
+                      <button
+                        onClick={() => {
+                          setAppMenuOpen(false);
+                          navigate('/apps');
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center gap-2 text-emerald-700 dark:text-emerald-300 rounded-xl"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Nueva app
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full px-3 py-1.5 transition-colors"
+              className="flex items-center gap-2.5 text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full px-3 py-1.5 transition-colors border border-blue-200 dark:border-blue-800/50 bg-blue-50/60 dark:bg-blue-950/40"
               title="Workspace activo"
             >
-              <FolderKanban className="w-4 h-4 text-[#1a73e8]" />
+              <FolderKanban className="w-4 h-4" />
               <span className="hidden sm:block font-semibold truncate max-w-[14rem]">
                 {workspace?.name ?? 'Sin workspace'}
               </span>
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <ChevronDown className="w-4 h-4 opacity-70" />
               <span className="w-8 h-8 rounded-full brand-gradient text-white text-xs font-semibold flex items-center justify-center shadow-sm select-none">
                 {initialsOf(user?.name, user?.email)}
               </span>
@@ -268,7 +346,7 @@ export function Layout({ children }: LayoutProps) {
             {userMenuOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg py-2 z-50">
                 <div className="px-4 py-2">
-                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  <div className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
                     Workspace activo
                   </div>
                   <div className="text-sm font-semibold text-slate-800 dark:text-white truncate">
@@ -285,9 +363,9 @@ export function Layout({ children }: LayoutProps) {
                         selectWorkspace(w);
                         setUserMenuOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 ${
                         workspace?.id === w.id
-                          ? 'text-[#1a73e8] font-medium'
+                          ? 'bg-blue-50/60 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-medium'
                           : 'text-slate-700 dark:text-slate-200'
                       }`}
                     >
@@ -306,7 +384,7 @@ export function Layout({ children }: LayoutProps) {
                       setUserMenuOpen(false);
                       setCreateOpen(true);
                     }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 text-[#1a73e8] rounded-xl"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 dark:hover:bg-blue-950/40 flex items-center gap-2 text-blue-700 dark:text-blue-300 rounded-xl"
                   >
                     <Plus className="w-4 h-4" />
                     Nuevo workspace

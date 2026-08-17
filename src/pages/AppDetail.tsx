@@ -8,6 +8,7 @@ import {
   Calendar,
   ExternalLink,
   Globe,
+  History,
   Loader2,
   Pencil,
   RefreshCw,
@@ -16,7 +17,12 @@ import {
   X,
 } from 'lucide-react';
 import { ApiError, laurelFetch } from '../api/laurel';
-import { type Application, type ApplicationUpdate, appsApi } from '../api/apps';
+import {
+  type Application,
+  type ApplicationUpdate,
+  type DeletionLog,
+  appsApi,
+} from '../api/apps';
 
 interface AppScoop {
   id: number;
@@ -133,8 +139,11 @@ export function AppDetail() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePhrase, setDeletePhrase] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deletionLogs, setDeletionLogs] = useState<DeletionLog[] | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -159,6 +168,17 @@ export function AppDetail() {
     if (Number.isFinite(appId)) void load();
   }, [appId, load]);
 
+  useEffect(() => {
+    if (!app?.deleted_at) {
+      setDeletionLogs(null);
+      return;
+    }
+    appsApi
+      .deletionLogs(appId)
+      .then((r) => setDeletionLogs(r.logs))
+      .catch(() => setDeletionLogs([]));
+  }, [app?.deleted_at, appId]);
+
   const handleSave = (data: ApplicationUpdate) => {
     setSaving(true);
     setSaveError(null);
@@ -174,18 +194,24 @@ export function AppDetail() {
       .finally(() => setSaving(false));
   };
 
-  const handleDelete = () => {
+  const openDelete = () => {
     if (!app) return;
-    if (!window.confirm(`Soft-delete de '${app.slug}'. No toca el cluster. Continuar?`)) return;
-    setBusy('delete');
-    setActionError(null);
+    setDeleteOpen(true);
+    setDeletePhrase('');
+    setDeleteError(null);
+  };
+
+  const confirmDelete = () => {
+    if (!app) return;
+    setDeleting(true);
+    setDeleteError(null);
     appsApi
       .delete(appId)
       .then(() => navigate('/apps'))
       .catch((e: unknown) =>
-        setActionError(e instanceof Error ? e.message : 'Error al eliminar'),
+        setDeleteError(e instanceof Error ? e.message : 'Error al eliminar'),
       )
-      .finally(() => setBusy(null));
+      .finally(() => setDeleting(false));
   };
 
   if (loading) {
@@ -250,7 +276,7 @@ export function AppDetail() {
           </button>
           <button
             onClick={() => void load()}
-            disabled={loading || busy !== null}
+            disabled={loading}
             className="btn-secondary"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -383,25 +409,161 @@ export function AppDetail() {
         )}
       </div>
 
-      {actionError && (
-        <div className="mb-6 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-start gap-2">
-          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-          <span className="text-sm">{actionError}</span>
-        </div>
-      )}
-
       {/* Zona de peligro */}
       <div className="card p-4 border-red-200 dark:border-red-900/50">
         <h2 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-3">Danger zone</h2>
         <button
-          onClick={handleDelete}
-          disabled={busy !== null}
+          onClick={openDelete}
+          disabled={!!app.deleted_at}
           className="btn-danger"
         >
           <Trash2 className="w-4 h-4" />
-          {busy === 'delete' ? 'Eliminando...' : 'Soft-delete app'}
+          {app.deleted_at ? 'App eliminada' : 'Soft-delete app'}
         </button>
+        {app.deleted_at && (
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Esta app ya fue eliminada el{' '}
+            {new Date(app.deleted_at).toLocaleString()}
+            {app.deleted_by ? ` por ${app.deleted_by}` : ''}. Su historial de
+            borrado se conserva mas abajo.
+          </p>
+        )}
       </div>
+
+      {/* Historial de borrado */}
+      {app.deleted_at && (
+        <div className="card p-4 mb-6 border-amber-200 dark:border-amber-900/50">
+          <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-3 flex items-center gap-2">
+            <History className="w-4 h-4" />
+            Historial de borrado
+          </h2>
+          <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1 mb-3">
+            <div>
+              <span className="text-slate-500 dark:text-slate-400">Borrada el: </span>
+              {new Date(app.deleted_at).toLocaleString()}
+            </div>
+            {app.deleted_by && (
+              <div>
+                <span className="text-slate-500 dark:text-slate-400">Borrada por: </span>
+                <code className="text-xs">{app.deleted_by}</code>
+              </div>
+            )}
+          </div>
+          {deletionLogs === null ? (
+            <p className="text-sm text-slate-500">Cargando logs...</p>
+          ) : deletionLogs.length === 0 ? (
+            <p className="text-sm text-slate-500">No hay logs de borrado.</p>
+          ) : (
+            <ul className="space-y-2">
+              {deletionLogs.map((log) => (
+                <li
+                  key={log.id}
+                  className="border border-slate-200 dark:border-slate-800 rounded-xl p-3"
+                >
+                  <details>
+                    <summary className="cursor-pointer text-sm text-slate-700 dark:text-slate-200 select-none">
+                      <span className="font-mono text-xs text-slate-400 mr-2">
+                        #{log.id}
+                      </span>
+                      {new Date(log.deleted_at).toLocaleString()}
+                      {log.deleted_by && (
+                        <span className="text-slate-500"> por {log.deleted_by}</span>
+                      )}
+                    </summary>
+                    {log.snapshot && (
+                      <pre className="mt-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-3 overflow-x-auto text-slate-800 dark:text-slate-200">
+                        {JSON.stringify(log.snapshot, null, 2)}
+                      </pre>
+                    )}
+                  </details>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Modal de confirmacion de borrado */}
+      {deleteOpen && app && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => !deleting && setDeleteOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
+                  Eliminar app
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Soft-delete. No toca el cluster. El historial queda en la pagina.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">
+              Esta accion es reversible solo restaurando manualmente. Para
+              confirmar, escribe el slug{' '}
+              <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-red-600 dark:text-red-300 font-mono">
+                {app.slug}
+              </code>
+              :
+            </p>
+
+            <input
+              type="text"
+              value={deletePhrase}
+              onChange={(e) => setDeletePhrase(e.target.value)}
+              placeholder={app.slug}
+              className="input w-full font-mono"
+              autoFocus
+              disabled={deleting}
+            />
+
+            {deleteError && (
+              <div className="mt-3 text-sm text-red-600 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleting}
+                className="btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting || deletePhrase !== app.slug}
+                className="btn-danger"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Eliminar app
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
