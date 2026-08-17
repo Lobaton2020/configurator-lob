@@ -11,6 +11,9 @@ import { ScoopDetail } from './pages/ScoopDetail';
 import { Cluster } from './pages/Cluster';
 import { ConfigStore } from './pages/ConfigStore';
 import { Secrets } from './pages/Secrets';
+import { Apps } from './pages/Apps';
+import { Domains } from './pages/Domains';
+import { DomainDetail } from './pages/DomainDetail';
 import { Login } from './pages/Login';
 import { AuthProvider } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
@@ -121,6 +124,36 @@ function App() {
                 <RequireAuth>
                   <Layout>
                     <Secrets />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/apps"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <Apps />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/domains"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <Domains />
+                  </Layout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/domains/:id"
+              element={
+                <RequireAuth>
+                  <Layout>
+                    <DomainDetail />
                   </Layout>
                 </RequireAuth>
               }
