@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useWorkspace } from '../auth/WorkspaceContext';
 import { useApp } from '../auth/AppContext';
 import { CreateWorkspaceModal } from './CreateWorkspaceModal';
-import { Settings, FileText, ChevronDown, ChevronRight, Moon, Sun, Box, Server, LogOut, Menu, X, Leaf, LayoutDashboard, Clock, FileCog, KeyRound, AppWindow, Globe, FolderKanban, Check, Plus } from 'lucide-react';
+import { Settings, FileText, ChevronDown, ChevronRight, Moon, Sun, Box, Server, LogOut, Menu, X, Leaf, LayoutDashboard, Clock, FileCog, AppWindow, Globe, FolderKanban, Check, Plus } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -222,11 +222,7 @@ export function Layout({ children }: LayoutProps) {
                 </SidebarItem>
                 <SidebarItem to="/configstore" exact className={navItem('/configstore', true)} requiresApp hasApp={hasApp}>
                   <FileCog className="w-5 h-5" />
-                  Configs
-                </SidebarItem>
-                <SidebarItem to="/secrets" exact={false} className={navItem('/secrets', false)} requiresApp hasApp={hasApp}>
-                  <KeyRound className="w-5 h-5" />
-                  Secrets
+                  Configs & Secrets
                 </SidebarItem>
                 <SidebarItem to="/audits" exact className={navItem('/audits', true)} requiresApp={false} hasApp={hasApp}>
                   <Clock className="w-5 h-5" />
