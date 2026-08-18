@@ -68,3 +68,36 @@ export const buildsApi = {
     });
   },
 };
+
+/**
+ * Respuesta de GET /api/apps/<slug>/next_version.
+ * La version es calculada por el backend desde los tags de Docker Hub
+ * (source-of-truth), no la setea el usuario. La UI solo la muestra.
+ */
+export interface NextVersionResponse {
+  slug: string;
+  namespace: string;
+  image: string;
+  next_version: string;
+}
+
+/**
+ * Cliente del endpoint de versionado automatico. Vive en su propio
+ * modulo (no en appsApi) porque no depende de un appId numerico:
+ * la ruta es por slug.
+ */
+export const versionsApi = {
+  /**
+   * Proxima version semver que el pipeline asignara al siguiente build.
+   * El backend hace login a Docker Hub y consulta los tags existentes
+   * sobre `docker.io/<namespace>/laurel_<slug>`.
+   *
+   * Posibles errores:
+   *   400 invalid_slug     -> el slug no cumple el formato
+   *   503 dockerhub_unconfigured -> el backend no tiene DOCKERHUB creds
+   *   502 dockerhub_error   -> Docker Hub rechazo login o tags fetch
+   */
+  next(slug: string): Promise<NextVersionResponse> {
+    return laurelFetch<NextVersionResponse>(`/api/apps/${slug}/next_version`);
+  },
+};

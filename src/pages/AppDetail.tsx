@@ -27,6 +27,7 @@ import {
   appsApi,
 } from '../api/apps';
 import { buildsApi, type AppBuild, type BuildStatus } from '../api/builds';
+import { NextVersionBadge } from '../components/NextVersionBadge';
 
 interface AppScoop {
   id: number;
@@ -203,11 +204,12 @@ export function AppDetail() {
   const [deletionLogs, setDeletionLogs] = useState<DeletionLog[] | null>(null);
 
   // --- Versiones & Builds ---
+  // La version ya NO la edita el operador: el backend la calcula desde
+  // los tags de Docker Hub via GET /api/apps/<slug>/next_version. La UI
+  // solo la muestra (NextVersionBadge) y dispara builds que usan esa
+  // version automaticamente.
   const [builds, setBuilds] = useState<AppBuild[]>([]);
   const [buildsLoading, setBuildsLoading] = useState(false);
-  const [versionDraft, setVersionDraft] = useState<string>('');
-  const [versionSaving, setVersionSaving] = useState(false);
-  const [versionError, setVersionError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -245,10 +247,6 @@ export function AppDetail() {
 
   // Sincroniza el draft de version con la version actual de la app.
   /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (app?.current_version) setVersionDraft(app.current_version);
-  }, [app?.current_version]);
-
   // Carga inicial + auto-refresh mientras haya builds vivos (pending/running).
   // El backend hace polling a Jenkins on-demand, asi que el frontend solo
   // necesita recargar la lista cada 5s.
@@ -278,29 +276,6 @@ export function AppDetail() {
     }, 5000);
     return () => window.clearInterval(id);
   }, [builds, loadBuilds]);
-
-  const handleSetVersion = () => {
-    if (!versionDraft.trim()) {
-      setVersionError('La version no puede estar vacia');
-      return;
-    }
-    setVersionSaving(true);
-    setVersionError(null);
-    buildsApi
-      .setCurrentVersion(appId, versionDraft.trim())
-      .then((res) => {
-        // Reflejamos la nueva version en el estado local de la app.
-        setApp((a) => (a ? { ...a, current_version: res.current_version } : a));
-      })
-      .catch((e: unknown) => {
-        if (e instanceof ApiError && e.fieldErrors?.version) {
-          setVersionError(e.fieldErrors.version);
-        } else {
-          setVersionError(e instanceof Error ? e.message : 'Error desconocido');
-        }
-      })
-      .finally(() => setVersionSaving(false));
-  };
 
   const handleSave = (data: ApplicationUpdate) => {
     setSaving(true);
@@ -477,38 +452,13 @@ export function AppDetail() {
           Versiones & Builds
         </h2>
 
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-          <div className="flex-1">
-            <label className={labelClass}>Version actual (la que usara el proximo push a master)</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                className="input flex-1 font-mono"
-                value={versionDraft}
-                onChange={(e) => {
-                  setVersionDraft(e.target.value);
-                  setVersionError(null);
-                }}
-                placeholder="1.0.0"
-                disabled={versionSaving}
-              />
-              <button
-                onClick={handleSetVersion}
-                disabled={versionSaving || versionDraft === app.current_version}
-                className="btn-primary shrink-0"
-              >
-                {versionSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {versionSaving ? 'Guardando...' : 'Guardar'}
-              </button>
-            </div>
-            {versionError && (
-              <p className="text-xs text-red-600 dark:text-red-400 mt-1">{versionError}</p>
-            )}
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Cuando hagas push a master del repo, el backend dispara Jenkins
-              con esta version como tag. El build aparece abajo en vivo.
+        <div className="mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+          <NextVersionBadge slug={app.slug} />
+          {app.current_version && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              Ultima version pusheada: <span className="font-mono">v{app.current_version}</span>
             </p>
-          </div>
+          )}
         </div>
 
         {buildsLoading && builds.length === 0 ? (
