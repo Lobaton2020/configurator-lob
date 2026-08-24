@@ -45,6 +45,10 @@ export interface Scoop {
   id: number;
   name: string;
   application: string;
+  /** FK a la aplicacion dueña. La fuente de verdad es `application_id`;
+   *  `application` es solo el slug derivado. */
+  application_id?: number;
+  application_slug?: string;
   type: ScoopUiType;
   url_registry: string;
   is_productive: boolean;
@@ -67,12 +71,15 @@ export interface Scoop {
 }
 
 export type ScoopForm = {
-  /** Slug de la Application (sigue siendo la fuente de verdad del backend
-   *  en el path); cuando viene de la UI, se rellena desde la app global. */
-  application: string;
+  /** Slug de la Application (solo se manda si el caller no conoce el ID;
+   *  preferido: enviar `application_id` para que el backend lo valide). */
+  application?: string;
   /** ID preferido por el backend: si llega, el scoop se vincula a esta app
    *  y `url_registry` se autoderiva del `docker_image_base` de la app. */
   application_id?: number;
+  /** Nombre tecnico del scoop (DNS-1123). Opcional: si llega vacio, el
+   *  backend lo deriva del slug de la app. Inmutable despues de creado. */
+  name?: string;
   type: ScoopUiType;
   /** Solo para scoops SIN app (legacy). Cuando hay app, el backend lo ignora
    *  y usa el docker_image_base de la app + `version` como tag. */
@@ -217,7 +224,6 @@ function toScoop(dto: ComponentDto): Scoop {
 
 function toPayload(form: ScoopForm): Record<string, unknown> {
   const payload: Record<string, unknown> = {
-    application: form.application,
     type: toApiType(form.type),
     is_productive: form.is_productive,
     requested_vcpu: toCpuQuantity(form.requested_vcpu),
@@ -228,12 +234,15 @@ function toPayload(form: ScoopForm): Record<string, unknown> {
     max_replicas: form.max_replicas,
     env_from: form.env_from ?? [],
   };
-  // Solo mandamos application_id y url_registry si el caller los puso.
-  // El backend prefiere application_id (deriva url_registry del app);
-  // url_registry es un override legacy para scoops sin app.
+  // application_id es la fuente de verdad: el backend autollena `application`
+  // (slug) y `url_registry` desde el record de Application. Solo mandamos
+  // `application` (slug) si el caller lo pone explicitamente (legacy).
   if (form.application_id !== undefined) payload.application_id = form.application_id;
+  if (form.application) payload.application = form.application;
   if (form.version) payload.version = form.version;
   if (form.url_registry) payload.url_registry = form.url_registry;
+  const trimmedName = form.name?.trim();
+  if (trimmedName) payload.name = trimmedName;
   return payload;
 }
 
@@ -271,12 +280,10 @@ export const scoopsApi = {
   async availableEnvFrom(opts: {
     namespace?: string;
     app?: string;
-    excludeApplication?: string;
   } = {}): Promise<AvailableEnvFrom> {
     const params = new URLSearchParams();
     if (opts.namespace) params.set('namespace', opts.namespace);
     if (opts.app) params.set('app', opts.app);
-    if (opts.excludeApplication) params.set('exclude_application', opts.excludeApplication);
     const qs = params.toString() ? `?${params}` : '';
     return laurelFetch<AvailableEnvFrom>(`/scoops/available-env-from${qs}`);
   },

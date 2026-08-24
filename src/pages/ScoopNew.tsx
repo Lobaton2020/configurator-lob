@@ -12,7 +12,7 @@ import {
 } from '../api/scoops';
 import { useApp } from '../auth/AppContext';
 
-const emptyForm: Omit<ScoopForm, 'application' | 'application_id'> = {
+const emptyForm: Omit<ScoopForm, 'application_id'> = {
   type: 'Web',
   is_productive: false,
   version: '',
@@ -92,7 +92,6 @@ function EnvFromPicker({
     scoopsApi
       .availableEnvFrom({
         app: appSlug,
-        excludeApplication: appSlug,
       })
       .then((res) => {
         if (cancelled) return;
@@ -158,9 +157,9 @@ function EnvFromPicker({
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
         ConfigMaps y Secrets creados previamente para esta app
         (<code className="text-slate-700 dark:text-slate-300">{appSlug || '<app>'}</code>)
-        en su namespace. Los propios del app
+        en su namespace. Los del app
         (<code>{appSlug || '<app>'}-config</code> / <code>-secret</code>)
-        ya se incluyen automaticamente y aqui se ocultan.
+        ya se inyectan automaticamente: podes seleccionarlos igual, no se duplican.
       </p>
 
       <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -299,7 +298,6 @@ export function ScoopNew() {
   const { app } = useApp();
   const [form, setForm] = useState<ScoopForm>(() => ({
     ...emptyForm,
-    application: app?.slug ?? '',
     application_id: app?.id,
   }));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -313,6 +311,10 @@ export function ScoopNew() {
     event.preventDefault();
     const next: Record<string, string> = {};
     if (!app) next.app = 'Selecciona una app antes de crear un scoop';
+    const trimmedName = form.name?.trim();
+    if (trimmedName && !/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(trimmedName)) {
+      next.name = 'Minusculas, digitos y guiones, sin empezar ni terminar en guion (DNS-1123)';
+    }
     if (form.min_replicas < 0) next.min_replicas = 'Must be >= 0';
     if (form.max_replicas < form.min_replicas) next.max_replicas = 'Must be >= min_replicas';
     setErrors(next);
@@ -385,6 +387,26 @@ export function ScoopNew() {
                 </div>
               )}
               {errors.app && <p className="text-xs text-red-600 mt-1">{errors.app}</p>}
+            </div>
+
+            <div>
+              <label className={labelClass}>Scoop name</label>
+              <input
+                type="text"
+                value={form.name ?? ''}
+                onChange={(e) => set('name', e.target.value)}
+                placeholder={app?.slug ?? 'mi-scoop'}
+                maxLength={63}
+                pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                className={`${inputClass} font-mono`}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Opcional. Si lo dejas vacio, se usa el slug de la app
+                (<code>{app?.slug ?? '<app>'}</code>). Formato DNS-1123: minusculas,
+                digitos y guiones, sin empezar ni terminar en guion. No se puede
+                cambiar despues de creado (es el nombre del Deployment en el cluster).
+              </p>
+              {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
             </div>
 
             <div>

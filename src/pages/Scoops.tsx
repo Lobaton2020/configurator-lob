@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Plus, Pencil, Trash2, RefreshCw, AlertCircle, Eye, ExternalLink } from 'lucide-react';
-import { ApiError, scoopsApi, type Scoop, type ScoopForm, type ScoopUiType } from '../api/scoops';
+import { ApiError, scoopsApi, type Scoop, type ScoopForm, type ScoopStatusReport, type ScoopUiType } from '../api/scoops';
 import { RegistryInput } from '../components/RegistryInput';
+import { usePodsPolling } from '../hooks/usePodsPolling';
 
 const emptyForm: ScoopForm = {
   application: '',
@@ -27,6 +28,45 @@ const statusClass: Record<Scoop['status'], string> = {
   pending: 'badge-amber',
   error: 'badge-red',
 };
+
+const podPhaseClass: Record<string, string> = {
+  Running: 'badge-green',
+  Pending: 'badge-amber',
+  Succeeded: 'badge-blue',
+  Failed: 'badge-red',
+  Unknown: 'badge-gray',
+};
+
+function PodCell({ report }: { report: ScoopStatusReport | null | undefined }) {
+  if (!report) {
+    return <span className="text-slate-400 text-xs">…</span>;
+  }
+  if (!report.deployed || report.pods.length === 0) {
+    return <span className="text-slate-400 text-xs">no deploy</span>;
+  }
+  const ready = report.ready_replicas ?? 0;
+  const desired = report.desired_replicas ?? 0;
+  return (
+    <div className="flex flex-col gap-0.5 min-w-[120px]">
+      <div className="text-xs text-slate-500 dark:text-slate-400">
+        <span className="font-mono font-medium">{ready}/{desired}</span>{' '}
+        ready · {report.pods.length} pod{report.pods.length === 1 ? '' : 's'}
+      </div>
+      <ul className="flex flex-wrap gap-1">
+        {report.pods.map((p) => (
+          <li
+            key={p.name}
+            className={`badge ${podPhaseClass[p.phase] ?? 'badge-gray'}`}
+            title={`${p.name}\nphase: ${p.phase}${p.reason ? `\nreason: ${p.reason}` : ''}\nrestarts: ${p.restarts}\nready: ${p.ready}`}
+          >
+            {p.phase}
+            {p.restarts > 0 ? ` · ${p.restarts}r` : ''}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export function Scoops() {
   const navigate = useNavigate();
@@ -56,10 +96,14 @@ export function Scoops() {
     void load();
   }, [load]);
 
+  // Polling 2s del estado real del cluster (pods, ready_replicas) para todos
+  // los scoops visibles. Para solo cuando todos quedan estables.
+  const podReports = usePodsPolling(scoops.map((s) => s.id));
+
   const openEdit = (scoop: Scoop) => {
     setEditingId(scoop.id);
     setForm({
-      application: scoop.application,
+      application_id: scoop.application_id,
       type: scoop.type,
       url_registry: scoop.url_registry,
       is_productive: scoop.is_productive,
@@ -85,7 +129,8 @@ export function Scoops() {
 
   const confirm = async () => {
     const next: Record<string, string> = {};
-    if (!form.application.trim()) next.application = 'Application is required';
+    // `application` se autoderiva en el backend desde `application_id`,
+    // asi que no hace falta validar el slug aca.
     if (!(form.url_registry ?? '').trim()) next.url_registry = 'URL Registry is required';
     if (form.min_replicas < 0) next.min_replicas = 'Must be >= 0';
     if (form.max_replicas < form.min_replicas) next.max_replicas = 'Must be >= min_replicas';
@@ -185,7 +230,7 @@ export function Scoops() {
             <table className="table">
               <thead>
                 <tr>
-                  {['Application', 'Access', 'Type', 'Status', 'URL Registry', 'Productive',
+                  {['Application', 'Access', 'Type', 'Status', 'Pods', 'URL Registry', 'Productive',
                     'Req vCPU', 'Req Memory', 'Lim vCPU', 'Lim Memory', 'Min Rep', 'Max Rep'].map((h) => (
                     <th key={h} className="th">{h}</th>
                   ))}
@@ -242,6 +287,9 @@ export function Scoops() {
                       <span className={`badge ${statusClass[s.status]}`}>
                         {s.status_label}
                       </span>
+                    </td>
+                    <td className="td">
+                      <PodCell report={podReports[s.id]} />
                     </td>
                     <td className="td">
                       {s.port ? (
