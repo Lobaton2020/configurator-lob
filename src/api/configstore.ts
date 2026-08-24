@@ -91,13 +91,6 @@ export const configMapsApi = {
     });
   },
 
-  async replaceData(namespace: string, name: string, data: Record<string, string>): Promise<UpsertResult> {
-    return laurelFetch<UpsertResult>(`/configstore/configmaps/${namespace}/${name}`, {
-      method: 'PUT',
-      body: { data },
-    });
-  },
-
   async delete(namespace: string, name: string): Promise<{ deleted: boolean; kind: string; namespace: string; name: string }> {
     return laurelFetch(`/configstore/configmaps/${namespace}/${name}`, { method: 'DELETE' });
   },
@@ -133,18 +126,6 @@ export const secretsApi = {
     return laurelFetch<UpsertResult>('/configstore/secrets', {
       method: 'POST',
       body: { app: input.app, namespace: input.namespace, name: input.name, data: encoded },
-    });
-  },
-
-  /** Reemplaza TODAS las claves del Secret. El caller envia el mapa completo. */
-  async replaceData(namespace: string, name: string, data: Record<string, string>): Promise<UpsertResult> {
-    const encoded: Record<string, string> = {};
-    for (const [k, v] of Object.entries(data)) {
-      encoded[k] = b64(v);
-    }
-    return laurelFetch<UpsertResult>(`/configstore/secrets/${namespace}/${name}`, {
-      method: 'PUT',
-      body: { data: encoded },
     });
   },
 

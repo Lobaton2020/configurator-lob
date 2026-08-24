@@ -10,15 +10,14 @@ import {
   X,
   Pencil,
   ShieldAlert,
-  Lock,
+  Eye,
+  EyeOff,
   AppWindow,
 } from 'lucide-react';
 import { ApiError } from '../api/laurel';
 import { configMapsApi, secretsApi, type ConfigMapDetail, type ConfigMapSummary, type SecretDetail, type SecretSummary } from '../api/configstore';
-import { scoopsApi } from '../api/scoops';
-import { appsApi, type Application } from '../api/apps';
-import { clusterApi } from '../api/cluster';
 import { useApp } from '../auth/AppContext';
+import { EnvImportButton } from '../components/EnvImportButton';
 
 type Tab = 'configmaps' | 'secrets';
 
@@ -64,14 +63,12 @@ function TabButton({ active, onClick, icon: Icon, label, hint }: { active: boole
 interface ConfigMapEditorProps {
   open: boolean;
   initial?: ConfigMapDetail | null;
-  appSuggestions: string[];
+  appSlug: string;
   onClose: () => void;
   onSave: (input: { app: string; namespace?: string; name?: string; data: Record<string, string> }) => Promise<void>;
 }
 
-function ConfigMapEditor({ open, initial, appSuggestions, onClose, onSave }: ConfigMapEditorProps) {
-  const [app, setApp] = useState(initial?.app ?? '');
-  const [namespace, setNamespace] = useState(initial?.namespace ?? '');
+function ConfigMapEditor({ open, initial, appSlug, onClose, onSave }: ConfigMapEditorProps) {
   const [name, setName] = useState(initial?.name ?? '');
   const initialRows = rowsFromObject(initial?.data);
   const [rows, setRows] = useState<KeyValueRow[]>(initialRows.length ? initialRows : [{ key: '', value: '' }]);
@@ -81,18 +78,12 @@ function ConfigMapEditor({ open, initial, appSuggestions, onClose, onSave }: Con
   if (!open) return null;
 
   const submit = async () => {
-    const cleanedApp = app.trim();
-    if (!cleanedApp) {
-      setError('Application es obligatorio');
-      return;
-    }
     const data = rowsToObject(rows);
     setSaving(true);
     setError(null);
     try {
       await onSave({
-        app: cleanedApp,
-        namespace: namespace.trim() || undefined,
+        app: appSlug,
         name: name.trim() || undefined,
         data,
       });
@@ -126,38 +117,26 @@ function ConfigMapEditor({ open, initial, appSuggestions, onClose, onSave }: Con
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>Application <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                list="configstore-apps-cm"
-                value={app}
-                onChange={(e) => setApp(e.target.value)}
-                className={inputClass}
-                placeholder="ej: portafolio-web"
-              />
-              <datalist id="configstore-apps-cm">
-                {appSuggestions.map((a) => <option key={a} value={a} />)}
-              </datalist>
-            </div>
-            <div>
-              <label className={labelClass}>Namespace</label>
-              <input type="text" value={namespace} onChange={(e) => setNamespace(e.target.value)} className={inputClass} placeholder="(default)" />
-            </div>
-            <div className="md:col-span-2">
-              <label className={labelClass}>Nombre <span className="text-xs text-slate-400">(opcional; default: <code>&lt;app&gt;-config</code>)</span></label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="ej: portafolio-web-config" />
-            </div>
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+            App: <code className="font-mono font-semibold">{appSlug}</code>
+            <span className="text-slate-400"> · namespace: <code className="font-mono">user-apps-{appSlug}</code></span>
+          </div>
+
+          <div>
+            <label className={labelClass}>Nombre <span className="text-xs text-slate-400">(opcional; default: <code>&lt;app&gt;-config</code>)</span></label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="ej: portafolio-web-config" />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className={labelClass}>Data (clave = valor)</label>
-              <button type="button" className="btn-secondary btn-sm" onClick={() => setRows([...rows, { key: '', value: '' }])}>
-                <Plus className="w-3 h-3" />
-                Fila
-              </button>
+              <div className="flex items-center gap-2">
+                <EnvImportButton currentRows={rows} onApply={setRows} />
+                <button type="button" className="btn-secondary btn-sm" onClick={() => setRows([...rows, { key: '', value: '' }])}>
+                  <Plus className="w-3 h-3" />
+                  Fila
+                </button>
+              </div>
             </div>
             <div className="space-y-2">
               {rows.map((row, i) => (
@@ -204,14 +183,12 @@ function ConfigMapEditor({ open, initial, appSuggestions, onClose, onSave }: Con
 interface SecretEditorProps {
   open: boolean;
   initial?: SecretDetail | null;
-  appSuggestions: string[];
+  appSlug: string;
   onClose: () => void;
   onSave: (input: { app: string; namespace?: string; name?: string; data: Record<string, string> }) => Promise<void>;
 }
 
-function SecretEditor({ open, initial, appSuggestions, onClose, onSave }: SecretEditorProps) {
-  const [app, setApp] = useState(initial?.app ?? '');
-  const [namespace, setNamespace] = useState(initial?.namespace ?? '');
+function SecretEditor({ open, initial, appSlug, onClose, onSave }: SecretEditorProps) {
   const [name, setName] = useState(initial?.name ?? '');
   // Solo prellenamos las claves (sin valores): los valores nunca salen del backend.
   const initialKeys = initial?.keys ?? [];
@@ -226,11 +203,6 @@ function SecretEditor({ open, initial, appSuggestions, onClose, onSave }: Secret
   if (!open) return null;
 
   const submit = async () => {
-    const cleanedApp = app.trim();
-    if (!cleanedApp) {
-      setError('Application es obligatorio');
-      return;
-    }
     const data = rowsToObject(rows);
     if (Object.keys(data).length === 0) {
       setError('El Secret debe tener al menos una clave con valor');
@@ -240,8 +212,7 @@ function SecretEditor({ open, initial, appSuggestions, onClose, onSave }: Secret
     setError(null);
     try {
       await onSave({
-        app: cleanedApp,
-        namespace: namespace.trim() || undefined,
+        app: appSlug,
         name: name.trim() || undefined,
         data,
       });
@@ -284,38 +255,26 @@ function SecretEditor({ open, initial, appSuggestions, onClose, onSave }: Secret
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>Application <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                list="configstore-apps-secret"
-                value={app}
-                onChange={(e) => setApp(e.target.value)}
-                className={inputClass}
-                placeholder="ej: portafolio-web"
-              />
-              <datalist id="configstore-apps-secret">
-                {appSuggestions.map((a) => <option key={a} value={a} />)}
-              </datalist>
-            </div>
-            <div>
-              <label className={labelClass}>Namespace</label>
-              <input type="text" value={namespace} onChange={(e) => setNamespace(e.target.value)} className={inputClass} placeholder="(default)" />
-            </div>
-            <div className="md:col-span-2">
-              <label className={labelClass}>Nombre <span className="text-xs text-slate-400">(opcional; default: <code>&lt;app&gt;-secret</code>)</span></label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="ej: portafolio-web-secret" />
-            </div>
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+            App: <code className="font-mono font-semibold">{appSlug}</code>
+            <span className="text-slate-400"> · namespace: <code className="font-mono">user-apps-{appSlug}</code></span>
+          </div>
+
+          <div>
+            <label className={labelClass}>Nombre <span className="text-xs text-slate-400">(opcional; default: <code>&lt;app&gt;-secret</code>)</span></label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="ej: portafolio-web-secret" />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className={labelClass}>Data (clave = valor)</label>
-              <button type="button" className="btn-secondary btn-sm" onClick={() => setRows([...rows, { key: '', value: '' }])}>
-                <Plus className="w-3 h-3" />
-                Fila
-              </button>
+              <div className="flex items-center gap-2">
+                <EnvImportButton currentRows={rows} onApply={setRows} />
+                <button type="button" className="btn-secondary btn-sm" onClick={() => setRows([...rows, { key: '', value: '' }])}>
+                  <Plus className="w-3 h-3" />
+                  Fila
+                </button>
+              </div>
             </div>
             <div className="space-y-2">
               {rows.map((row, i) => (
@@ -343,10 +302,11 @@ function SecretEditor({ open, initial, appSuggestions, onClose, onSave }: Secret
                         if (next.has(i)) next.delete(i); else next.add(i);
                         return next;
                       })}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
-                      aria-label={revealed.has(i) ? 'Ocultar' : 'Mostrar'}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      aria-label={revealed.has(i) ? 'Ocultar valor' : 'Mostrar valor'}
+                      title={revealed.has(i) ? 'Ocultar valor' : 'Mostrar valor'}
                     >
-                      <Lock className="w-4 h-4" />
+                      {revealed.has(i) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   <button
@@ -389,32 +349,11 @@ export function ConfigStore() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { app: globalApp } = useApp();
   const initialTab = (searchParams.get('tab') === 'secrets' ? 'secrets' : 'configmaps') as Tab;
-  // El app por defecto es la activa en el header; el caller puede sobreescribir
-  // via ?app=<slug> (ej: link compartido con un scoop concreto). El backend
-  // autoderiva el namespace a `user-apps-<slug>` y filtra por label, asi que
-  // cada app solo ve los ConfigMaps/Secrets que se crearon para ella.
-  const initialApp = searchParams.get('app') ?? globalApp?.slug ?? '';
-  const initialNamespace = searchParams.get('namespace') ?? '';
 
   const [tab, setTab] = useState<Tab>(initialTab);
-  const [appFilter, setAppFilter] = useState(initialApp);
-  const [namespaceFilter, setNamespaceFilter] = useState(initialNamespace);
-
-  // Si cambia la app global y no hay override explicito en la URL, seguimos la app.
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    const urlOverride = searchParams.get('app');
-    if (!urlOverride && globalApp && appFilter !== globalApp.slug) {
-      setAppFilter(globalApp.slug);
-    }
-  }, [globalApp?.slug, searchParams]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const [cmList, setCmList] = useState<ConfigMapSummary[]>([]);
   const [secretsList, setSecretsList] = useState<SecretSummary[]>([]);
-  const [appSuggestions, setAppSuggestions] = useState<string[]>([]);
-  const [apps, setApps] = useState<Application[]>([]);
-  const [userNamespaces, setUserNamespaces] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -422,56 +361,35 @@ export function ConfigStore() {
   const [cmEditor, setCmEditor] = useState<{ open: boolean; detail: ConfigMapDetail | null }>({ open: false, detail: null });
   const [secretEditor, setSecretEditor] = useState<{ open: boolean; detail: SecretDetail | null }>({ open: false, detail: null });
 
-  // Sincroniza estado -> URL para que /configstore?tab=secrets&app=portafolio-web sea compartible.
+  // Sincroniza solo `tab` en URL para que /configstore?tab=secrets sea compartible.
   useEffect(() => {
     const next = new URLSearchParams();
     if (tab !== 'configmaps') next.set('tab', tab);
-    if (appFilter) next.set('app', appFilter);
-    if (namespaceFilter) next.set('namespace', namespaceFilter);
     setSearchParams(next, { replace: true });
-  }, [tab, appFilter, namespaceFilter, setSearchParams]);
+  }, [tab, setSearchParams]);
 
-  // Carga inicial de apps existentes (para datalist) + lista filtrada.
+  // Carga los recursos del app global activa. El backend autoderiva el
+  // namespace a `user-apps-<slug>` y filtra por label, asi que cada app
+  // solo ve los ConfigMaps/Secrets que se crearon para ella.
   const load = useCallback(async () => {
+    if (!globalApp) return;
     setLoading(true);
     setLoadError(null);
     try {
-      const opts = { namespace: namespaceFilter || undefined, app: appFilter || undefined };
-      const [cms, secs, scoops] = await Promise.all([
-        configMapsApi.list(opts),
-        secretsApi.list(opts),
-        scoopsApi.list().catch(() => []),
+      const [cms, secs] = await Promise.all([
+        configMapsApi.list({ app: globalApp.slug }),
+        secretsApi.list({ app: globalApp.slug }),
       ]);
       setCmList(cms);
       setSecretsList(secs);
-      const apps = new Set<string>(scoops.map((s) => s.application));
-      cms.forEach((c) => apps.add(c.app));
-      secs.forEach((s) => apps.add(s.app));
-      setAppSuggestions([...apps].sort());
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setLoading(false);
     }
-  }, [namespaceFilter, appFilter]);
+  }, [globalApp]);
 
   useEffect(() => { void load(); }, [load]);
-
-  // Carga las opciones de los dropdowns de filtros.
-  useEffect(() => {
-    appsApi
-      .list({ page: 1, limit: 1000 })
-      .then((d) => setApps(d.items))
-      .catch(() => undefined);
-    clusterApi
-      .namespaces()
-      .then((nsList) =>
-        setUserNamespaces(
-          nsList.map((ns) => ns.name).filter((n) => n.startsWith('user-apps')).sort(),
-        ),
-      )
-      .catch(() => undefined);
-  }, []);
 
   const onEditCM = async (row: ConfigMapSummary) => {
     try {
@@ -536,10 +454,10 @@ export function ConfigStore() {
             {tab === 'configmaps' ? <FileCog /> : <KeyRound />}
             Config Store
           </h1>
-          {globalApp && appFilter === globalApp.slug && (
+          {globalApp && (
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 inline-flex items-center gap-1.5">
               <AppWindow className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              Filtrado por la app global <code className="font-mono">{globalApp.slug}</code>
+              App: <code className="font-mono">{globalApp.slug}</code>
             </p>
           )}
         </div>
@@ -568,43 +486,6 @@ export function ConfigStore() {
         <span className="ml-auto chip">Total claves: {totalKeys}</span>
       </div>
 
-      <div className="card p-4 mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className={labelClass}>Filtrar por application</label>
-            <select
-              className={inputClass}
-              value={appFilter}
-              onChange={(e) => setAppFilter(e.target.value)}
-            >
-              <option value="">(todas)</option>
-              {appFilter && !apps.some((a) => a.slug === appFilter) && (
-                <option value={appFilter}>{appFilter}</option>
-              )}
-              {apps.map((a) => (
-                <option key={a.slug} value={a.slug}>{a.name} ({a.slug})</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Namespace</label>
-            <select
-              className={inputClass}
-              value={namespaceFilter}
-              onChange={(e) => setNamespaceFilter(e.target.value)}
-            >
-              <option value="">(default)</option>
-              {namespaceFilter && !userNamespaces.includes(namespaceFilter) && (
-                <option value={namespaceFilter}>{namespaceFilter}</option>
-              )}
-              {userNamespaces.map((ns) => (
-                <option key={ns} value={ns}>{ns}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
       {loadError && (
         <div className="mb-4 alert alert-red">
           <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -618,7 +499,7 @@ export function ConfigStore() {
         </div>
       ) : list.length === 0 ? (
         <div className="card p-8 text-center text-slate-600 dark:text-slate-400">
-          {tab === 'configmaps' ? 'No hay ConfigMaps para los filtros activos.' : 'No hay Secrets para los filtros activos.'}
+          {tab === 'configmaps' ? 'No hay ConfigMaps.' : 'No hay Secrets.'}
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -627,8 +508,6 @@ export function ConfigStore() {
               <thead>
                 <tr>
                   <th className="th">Name</th>
-                  <th className="th">Namespace</th>
-                  <th className="th">App</th>
                   <th className="th">Keys</th>
                   <th className="th">Created</th>
                   <th className="th text-right">Actions</th>
@@ -638,17 +517,6 @@ export function ConfigStore() {
                 {list.map((row) => (
                   <tr key={`${row.namespace}/${row.name}`} className="tr">
                     <td className="td font-mono">{row.name}</td>
-                    <td className="td">{row.namespace}</td>
-                    <td className="td">
-                      <button
-                        type="button"
-                        className="link"
-                        onClick={() => setAppFilter(row.app)}
-                        title="Filtrar por esta app"
-                      >
-                        {row.app || <span className="text-slate-400">-</span>}
-                      </button>
-                    </td>
                     <td className="td">
                       {row.keys.length === 0 ? (
                         <span className="text-slate-400 text-xs">(vacio)</span>
@@ -698,7 +566,7 @@ export function ConfigStore() {
         key={cmEditor.detail ? `${cmEditor.detail.namespace}/${cmEditor.detail.name}` : 'new-cm'}
         open={cmEditor.open}
         initial={cmEditor.detail}
-        appSuggestions={appSuggestions}
+        appSlug={globalApp?.slug ?? ''}
         onClose={() => setCmEditor({ open: false, detail: null })}
         onSave={onUpsertCM}
       />
@@ -707,7 +575,7 @@ export function ConfigStore() {
         key={secretEditor.detail ? `${secretEditor.detail.namespace}/${secretEditor.detail.name}` : 'new-secret'}
         open={secretEditor.open}
         initial={secretEditor.detail}
-        appSuggestions={appSuggestions}
+        appSlug={globalApp?.slug ?? ''}
         onClose={() => setSecretEditor({ open: false, detail: null })}
         onSave={onUpsertSecret}
       />
