@@ -1,8 +1,10 @@
 const WB = 200;
 const H = 40;
+const REPEATS = 2;
 
 function wavePath(period: number, amp: number, base: number): string {
-  const periods = WB / period;
+  const totalWidth = WB * REPEATS;
+  const periods = totalWidth / period;
   let d = `M0,${base}`;
   for (let i = 0; i < periods; i++) {
     const x0 = i * period;
@@ -10,7 +12,7 @@ function wavePath(period: number, amp: number, base: number): string {
     d += `C${x0 + period * 0.24},${base} ${x0 + period * 0.24},${peak} ${x0 + period * 0.5},${peak}`;
     d += `C${x0 + period * 0.76},${peak} ${x0 + period * 0.76},${base} ${x0 + period},${base}`;
   }
-  return `${d}L${WB},${H}L0,${H}Z`;
+  return `${d}L${totalWidth},${H}L0,${H}Z`;
 }
 
 const LAYERS = [
@@ -46,12 +48,12 @@ export function LandscapeBg() {
       {LAYERS.map((l, i) => (
         <div
           key={i}
-          className={`landscape-anim absolute inset-x-0 bottom-0 ${l.height}`}
+          className={`landscape-anim absolute left-0 bottom-0 w-[200%] ${l.height}`}
           style={{
             animation: `${l.reverse ? 'drift-reverse' : 'drift-forward'} ${l.speed}s linear infinite`,
           }}
         >
-          <svg viewBox={`0 0 ${WB} ${H}`} preserveAspectRatio="none" className="w-full h-full">
+          <svg viewBox={`0 0 ${WB * REPEATS} ${H}`} preserveAspectRatio="none" className="w-full h-full">
             <path d={wavePath(l.period, l.amp, l.base)} fill={l.fill} />
           </svg>
         </div>

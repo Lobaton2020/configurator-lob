@@ -13,6 +13,11 @@ dist-ssr
 dist-new
 *.local
 
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
 # Variables locales: solo se versiona .env.example (la plantilla).
 .env
 

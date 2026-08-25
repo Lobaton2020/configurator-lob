@@ -230,7 +230,7 @@ export function Scoops() {
             <table className="table">
               <thead>
                 <tr>
-                  {['Application', 'Access', 'Type', 'Status', 'Pods', 'URL Registry', 'Productive',
+                  {['Name', 'Access', 'Type', 'Status', 'Pods', 'URL Registry', 'Productive',
                     'Req vCPU', 'Req Memory', 'Lim vCPU', 'Lim Memory', 'Min Rep', 'Max Rep'].map((h) => (
                     <th key={h} className="th">{h}</th>
                   ))}
@@ -241,36 +241,7 @@ export function Scoops() {
                 {scoops.map((s) => (
                   <tr key={s.id} className="tr">
                     <td className="td font-medium">
-                      <div className="flex flex-col">
-                        {s.url ? (
-                          <a
-                            href={s.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="link hover:underline truncate inline-flex items-center gap-1"
-                            title={`Abrir ${s.url}`}
-                          >
-                            {s.application}
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        ) : (
-                          <span className="truncate">{s.application}</span>
-                        )}
-                        <span className="block text-xs text-slate-400 font-normal">
-                          {s.url ? (
-                            <a
-                              href={s.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:underline"
-                            >
-                              {s.name}
-                            </a>
-                          ) : (
-                            s.name
-                          )}
-                        </span>
-                      </div>
+                      <span className="truncate">{s.name}</span>
                     </td>
                     <td className="td">
                       <span
